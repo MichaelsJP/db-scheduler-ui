@@ -79,6 +79,20 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+        <pluginRepositories>
+            <pluginRepository>
+                <id>jitpack.io</id>
+                <url>https://jitpack.io</url>
+            </pluginRepository>
+        </pluginRepositories>
+
+        <repositories>
+            <repository>
+                <id>jitpack.io</id>
+                <url>https://jitpack.io</url>
+            </repository>
+        </repositories>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
