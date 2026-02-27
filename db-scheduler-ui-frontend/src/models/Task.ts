@@ -23,4 +23,5 @@ export type Task = {
   consecutiveFailures: number[];
   lastHeartbeat: Date | null;
   version: number;
+  tags: string[];
 };

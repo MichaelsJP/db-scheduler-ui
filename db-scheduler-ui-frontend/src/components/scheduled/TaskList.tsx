@@ -25,7 +25,11 @@ import colors from 'src/styles/colors';
 import { HeaderBar } from 'src/components/common/HeaderBar';
 import { TasksResponse } from 'src/models/TasksResponse';
 
-const TaskList: React.FC = () => {
+interface TaskListProps {
+  filterTags?: string[];
+}
+
+const TaskList: React.FC<TaskListProps> = ({ filterTags }) => {
   const { taskName } = useParams<{ taskName?: string }>();
   const isDetailsView = !!taskName;
 
@@ -55,8 +59,13 @@ const TaskList: React.FC = () => {
           fetchDataFunction: getTask,
           taskName: taskName,
           baseQueryKey: TASK_DETAILS_QUERY_KEY,
+          tags: filterTags,
         }
-      : { fetchDataFunction: getTasks, baseQueryKey: TASK_QUERY_KEY },
+      : { 
+          fetchDataFunction: getTasks, 
+          baseQueryKey: TASK_QUERY_KEY,
+          tags: filterTags,
+        },
   );
 
   return (

@@ -38,6 +38,7 @@ export const LogCard: React.FC<LogCardProps> = ({ log }) => (
       exceptionClass={log.exceptionClass}
       exceptionMessage={log.exceptionMessage}
       timeFinished={log.timeFinished}
+      tags={log.tags}
     />
     <Divider color={colors.primary['300']} />
     <LogAccordionItem

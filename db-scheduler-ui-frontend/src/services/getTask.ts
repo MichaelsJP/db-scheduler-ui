@@ -52,6 +52,7 @@ export const getTask = async (
       'taskInstanceExactMatch',
       params.taskInstanceExactMatch.toString(),
     );
+  params.tags && queryParams.append('tags', params.tags.join(','));
 
   const response = await fetch(`${API_BASE_URL}/tasks/details?${queryParams}`, {
     method: 'GET',

@@ -26,6 +26,7 @@ interface UseInfiniteScrollingProps<
   baseQueryKey: string;
   taskName?: string;
   taskInstance?: string;
+  tags?: string[];
 }
 
 export const useInfiniteScrolling = <
@@ -35,6 +36,7 @@ export const useInfiniteScrolling = <
   taskName,
   taskInstance,
   baseQueryKey,
+  tags,
 }: UseInfiniteScrollingProps<T>) => {
   const [currentFilter, setCurrentFilter] = useState<FilterBy>(FilterBy.All);
   const [currentSort, setCurrentSort] = useState<SortBy>(SortBy.Default);
@@ -73,6 +75,7 @@ export const useInfiniteScrolling = <
       searchTermTaskInstance,
       taskNameExactMatch,
       taskInstanceExactMatch,
+      ...(tags ? [tags] : []),
     ],
     [
       baseQueryKey,
@@ -85,6 +88,7 @@ export const useInfiniteScrolling = <
       searchTermTaskInstance,
       taskNameExactMatch,
       taskInstanceExactMatch,
+      tags,
     ],
   );
 
@@ -149,6 +153,7 @@ export const useInfiniteScrolling = <
         size: limit,
         ...(taskName ? { taskName } : {}),
         ...(taskInstance ? { taskId: taskInstance } : {}),
+        tags,
       };
 
       return fetchDataFunction(params);

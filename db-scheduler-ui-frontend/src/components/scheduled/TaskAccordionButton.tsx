@@ -18,6 +18,7 @@ import {
   Flex,
   HStack,
   Text,
+  VStack,
 } from '@chakra-ui/react';
 import { StatusBox } from 'src/components/common/StatusBox';
 import { TaskRunButton } from 'src/components/input/TaskRunButton';
@@ -32,6 +33,8 @@ import { determineStatus, isStatus } from 'src/utils/determineStatus';
 import colors from 'src/styles/colors';
 import { getReadonly } from 'src/utils/config';
 
+import { TagBadge } from 'src/components/common/TagBadge';
+
 interface TaskAccordionButtonProps extends Task {
   refetch: () => void;
 }
@@ -45,6 +48,7 @@ export const TaskAccordionButton: React.FC<TaskAccordionButtonProps> = (
     consecutiveFailures,
     taskInstance,
     taskData,
+    tags,
     refetch,
   } = props;
   const { taskName: isDetailsView } = useParams<{ taskName?: string }>();
@@ -91,7 +95,14 @@ export const TaskAccordionButton: React.FC<TaskAccordionButtonProps> = (
               alignItems={'center'}
               overflow={'hidden'}
             >
-              {taskName}
+              <VStack align="start" spacing={0}>
+                <Text>{taskName}</Text>
+                <HStack wrap="wrap" spacing={1}>
+                  {tags && tags.map(tag => (
+                    <TagBadge key={tag} tag={tag} />
+                  ))}
+                </HStack>
+              </VStack>
               {isStatus('Group', props) && (
                 <Box ml={2}>
                   <NumberCircleGroup {...props} />

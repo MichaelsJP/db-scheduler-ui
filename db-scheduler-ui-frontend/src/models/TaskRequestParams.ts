@@ -27,6 +27,7 @@ export interface TaskRequestParams {
   refresh?: boolean;
   taskNameExactMatch?: boolean;
   taskInstanceExactMatch?: boolean;
+  tags?: string[];
 }
 
 export interface TaskDetailsRequestParams extends TaskRequestParams {

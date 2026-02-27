@@ -11,19 +11,10 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export type Log = {
-  id: number;
-  taskName: string;
-  taskInstance: string;
-  taskData: object | null;
-  executionTime: string;
-  pickedBy: string | null;
-  timeStarted: Date;
-  timeFinished: Date;
-  succeeded: boolean;
-  durationMs: number;
-  exceptionClass: string | null;
-  exceptionMessage: string | null;
-  exceptionStackTrace: string | null;
-  tags: string[];
+import { Log } from 'src/models/Log';
+import { Task } from 'src/models/Task';
+
+export type Timeline = {
+  past: Log[];
+  future: Task[];
 };
