@@ -108,14 +108,14 @@ public class LogLogic {
     if (requestParams.getStartTime() != null) {
       queryBuilder.andCondition(
           new TimeCondition(
-              "time_started",
+              "time_finished",
               Operators.GREATER_THAN_OR_EQUALS.getOperator(),
               requestParams.getStartTime()));
     }
     if (requestParams.getEndTime() != null) {
       queryBuilder.andCondition(
           new TimeCondition(
-              "time_finished",
+              "time_started",
               Operators.LESS_THAN_OR_EQUALS.getOperator(),
               requestParams.getEndTime()));
     }

@@ -21,8 +21,6 @@ import { scaleTime } from '@visx/scale';
 import { GridColumns } from '@visx/grid';
 import { ParentSize } from '@visx/responsive';
 import { useTooltip, TooltipWithBounds, defaultStyles } from '@visx/tooltip';
-import { localPoint } from '@visx/event';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Timeline } from 'src/models/Timeline';
 import { Log } from 'src/models/Log';
 import { Task } from 'src/models/Task';
@@ -53,14 +51,14 @@ export const TimelineChart = ({ width, height, timeline, now, start, end }: Time
     tooltipTop = 0,
   } = useTooltip<TooltipData>();
 
-  const xScale = useMemo(() => scaleTime({
-    domain: [start, end],
-    range: [margin.left, width - margin.right],
-  }), [start, end, width]);
+  const xScale = useMemo(() => {
+    return scaleTime({
+      domain: [start, end],
+      range: [margin.left, Math.max(margin.left + 1, width - margin.right)],
+    });
+  }, [start, end, width, margin.left, margin.right]);
 
   const handleHover = useCallback((event: React.MouseEvent, data: TooltipData, x: number, y: number) => {
-    const point = localPoint(event);
-    if (!point) return;
     showTooltip({
       tooltipData: data,
       tooltipLeft: x,
@@ -68,92 +66,102 @@ export const TimelineChart = ({ width, height, timeline, now, start, end }: Time
     });
   }, [showTooltip]);
 
-  if (width < 10 || height < 10) return null;
+  if (width < 10 || height < 10) return <Box>Invalid dimensions</Box>;
 
   const rowHeight = 25;
-  const chartAreaHeight = height - margin.top - margin.bottom;
-  const maxRows = Math.floor(chartAreaHeight / rowHeight);
+  const chartAreaHeight = Math.max(100, height - margin.top - margin.bottom);
+  const maxRows = Math.floor(chartAreaHeight / rowHeight) || 1;
+
+  if ((!timeline.past || timeline.past.length === 0) && (!timeline.future || timeline.future.length === 0)) {
+    return (
+      <Box p={10} textAlign="center" color="gray.500">
+        No tasks or logs found in this time window.
+      </Box>
+    );
+  }
 
   return (
     <Box position="relative" w="full" h="full">
       <svg width={width} height={height}>
         <GridColumns scale={xScale} width={width} height={chartAreaHeight} stroke="#f0f0f0" top={margin.top} />
         <Group top={margin.top}>
-          <AnimatePresence>
-            {/* Past Logs */}
-            {timeline.past?.map((log: Log, i: number) => {
-              const s = new Date(log.timeStarted);
-              const f = new Date(log.timeFinished);
-              if (isNaN(s.getTime()) || isNaN(f.getTime())) return null;
-              
-              const xPos = xScale(s);
-              const w = Math.max(8, xScale(f) - xPos);
-              const yPos = (i % maxRows) * rowHeight;
-
-              return (
-                <motion.rect
-                  key={`log-${log.id}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 0.8, x: xPos, width: w }}
-                  y={yPos}
-                  height={20}
-                  fill={log.succeeded ? '#48BB78' : '#F56565'}
-                  rx={4}
-                  onMouseEnter={(e) => handleHover(e, {
-                    name: log.taskName,
-                    id: log.taskInstance,
-                    status: log.succeeded ? 'succeeded' : 'failed',
-                    time: `${s.toLocaleTimeString()} - ${f.toLocaleTimeString()}`
-                  }, xPos + w/2, yPos + margin.top)}
-                  onMouseLeave={hideTooltip}
-                />
-              );
-            })}
+          {/* Past Logs */}
+          {timeline.past?.map((log: Log, i: number) => {
+            const s = new Date(log.timeStarted);
+            const f = new Date(log.timeFinished);
+            if (isNaN(s.getTime()) || isNaN(f.getTime())) return null;
             
-            {/* Current & Future Tasks */}
-            {timeline.future?.map((task: Task, i: number) => {
-              const execTime = Array.isArray(task.executionTime) ? task.executionTime[0] : task.executionTime;
-              if (!execTime) return null;
-              const d = new Date(execTime);
-              if (isNaN(d.getTime())) return null;
+            const xPos = xScale(s);
+            const w = Math.max(8, xScale(f) - xPos);
+            const yPos = (i % maxRows) * rowHeight;
 
-              const isRunning = Array.isArray(task.picked) ? task.picked[0] : task.picked;
-              const xPos = xScale(isRunning ? now : d);
-              const yPos = ((i + (timeline.past?.length || 0)) % maxRows) * rowHeight;
+            return (
+              <rect
+                key={`log-${log.id}`}
+                x={xPos}
+                y={yPos}
+                width={w}
+                height={20}
+                fill={log.succeeded ? '#48BB78' : '#F56565'}
+                opacity={0.8}
+                rx={4}
+                onMouseEnter={(e) => handleHover(e, {
+                  name: log.taskName,
+                  id: log.taskInstance,
+                  status: log.succeeded ? 'succeeded' : 'failed',
+                  time: `${s.toLocaleTimeString()} - ${f.toLocaleTimeString()}`
+                }, xPos + w/2, yPos + margin.top)}
+                onMouseLeave={hideTooltip}
+                style={{ cursor: 'pointer' }}
+              />
+            );
+          })}
+          
+          {/* Current & Future Tasks */}
+          {timeline.future?.map((task: Task, i: number) => {
+            const execTimes = Array.isArray(task.executionTime) ? task.executionTime : [task.executionTime];
+            const execTime = execTimes[0];
+            if (!execTime) return null;
+            const d = new Date(execTime);
+            if (isNaN(d.getTime())) return null;
 
-              return (
-                <motion.rect
-                  key={`task-${task.taskName}-${Array.isArray(task.taskInstance) ? task.taskInstance[0] : task.taskInstance || i}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ 
-                    opacity: isRunning ? 0.9 : 0.6,
-                    x: isRunning ? xPos - 15 : xPos,
-                    width: isRunning ? 30 : 12
-                  }}
-                  y={yPos}
-                  height={20}
-                  fill={isRunning ? '#ED8936' : '#4299E1'}
-                  rx={4}
-                  onMouseEnter={(e) => handleHover(e, {
-                    name: task.taskName,
-                    id: Array.isArray(task.taskInstance) ? task.taskInstance[0] : task.taskInstance,
-                    status: isRunning ? 'running' : 'scheduled',
-                    time: d.toLocaleTimeString()
-                  }, xPos, yPos + margin.top)}
-                  onMouseLeave={hideTooltip}
-                />
-              );
-            })}
-          </AnimatePresence>
+            const isRunning = Array.isArray(task.picked) ? task.picked[0] : task.picked;
+            const xPos = xScale(isRunning ? now : d);
+            const yPos = ((i + (timeline.past?.length || 0)) % maxRows) * rowHeight;
+            const instId = Array.isArray(task.taskInstance) ? task.taskInstance[0] : task.taskInstance;
+
+            return (
+              <rect
+                key={`task-${task.taskName}-${instId || i}`}
+                x={isRunning ? xPos - 15 : xPos}
+                y={yPos}
+                width={isRunning ? 30 : 12}
+                height={20}
+                fill={isRunning ? '#ED8936' : '#4299E1'}
+                opacity={isRunning ? 0.9 : 0.6}
+                rx={4}
+                onMouseEnter={(e) => handleHover(e, {
+                  name: task.taskName,
+                  id: String(instId),
+                  status: isRunning ? 'running' : 'scheduled',
+                  time: d.toLocaleTimeString()
+                }, xPos, yPos + margin.top)}
+                onMouseLeave={hideTooltip}
+                style={{ cursor: 'pointer' }}
+              />
+            );
+          })}
           
           {/* "Now" Line */}
-          <motion.line
-            animate={{ x1: xScale(now), x2: xScale(now) }}
+          <line
+            x1={xScale(now)}
+            x2={xScale(now)}
             y1={0}
             y2={chartAreaHeight}
             stroke="#E53E3E"
-            strokeWidth={2}
+            strokeWidth={3}
             strokeDasharray="5 3"
+            style={{ pointerEvents: 'none' }}
           />
         </Group>
         <AxisBottom
@@ -221,8 +229,8 @@ export const TimelinePage: React.FC = () => {
     endOffset: 1000 * 60 * 30,    // 30m future
   });
 
-  const start = useMemo(() => new Date(stabilizedNow.getTime() + viewWindow.startOffset), [stabilizedNow]);
-  const end = useMemo(() => new Date(stabilizedNow.getTime() + viewWindow.endOffset), [stabilizedNow]);
+  const start = useMemo(() => new Date(stabilizedNow.getTime() + viewWindow.startOffset), [stabilizedNow, viewWindow.startOffset]);
+  const end = useMemo(() => new Date(stabilizedNow.getTime() + viewWindow.endOffset), [stabilizedNow, viewWindow.endOffset]);
 
   const { data: timeline } = useQuery(
     [TIMELINE_QUERY_KEY, start.toISOString(), end.toISOString()],
@@ -241,16 +249,18 @@ export const TimelinePage: React.FC = () => {
       </HStack>
       <Box flex={1} bg="white" shadow="md" borderRadius="xl" position="relative" overflow="hidden" minH="500px">
         {timeline ? (
-          <ParentSize>
+          <ParentSize debounceTime={50}>
             {({ width, height }) => (
-              <TimelineChart 
-                width={width} 
-                height={height} 
-                timeline={timeline} 
-                now={now} 
-                start={start} 
-                end={end} 
-              />
+              width > 0 && height > 0 ? (
+                <TimelineChart 
+                  width={width} 
+                  height={height} 
+                  timeline={timeline} 
+                  now={now} 
+                  start={start} 
+                  end={end} 
+                />
+              ) : null
             )}
           </ParentSize>
         ) : (

@@ -42,7 +42,7 @@ import { RefreshButton } from 'src/components/input/RefreshButton';
 
 const bisectDate = bisector<MetricDataPoint, Date>(d => new Date(d.timestamp)).left;
 
-const Sparkline = ({ data, width, height, color }: { data: MetricDataPoint[], width: number, height: number, color: string }) => {
+const Sparkline = ({ data, width, height, color, minX, maxX }: { data: MetricDataPoint[], width: number, height: number, color: string, minX: number, maxX: number }) => {
   const {
     showTooltip,
     hideTooltip,
@@ -51,13 +51,12 @@ const Sparkline = ({ data, width, height, color }: { data: MetricDataPoint[], wi
     tooltipTop = 0,
   } = useTooltip<MetricDataPoint>();
 
-  const timestamps = useMemo(() => data?.map(d => new Date(d.timestamp).getTime()) || [], [data]);
   const values = useMemo(() => data?.map(d => d.value) || [], [data]);
 
   const xScale = useMemo(() => scaleTime({
-    domain: [Math.min(...timestamps), Math.max(...timestamps)],
+    domain: [minX, maxX],
     range: [0, width],
-  }), [timestamps, width]);
+  }), [minX, maxX, width]);
 
   const yScale = useMemo(() => scaleLinear({
     domain: [0, Math.max(...values) * 1.1 || 1],
@@ -149,7 +148,7 @@ const Sparkline = ({ data, width, height, color }: { data: MetricDataPoint[], wi
   );
 };
 
-const MetricCard = ({ label, value, helpText, history, color }: { label: string, value: string, helpText: string, history?: MetricDataPoint[], color: string }) => (
+const MetricCard = ({ label, value, helpText, history, color, minX, maxX }: { label: string, value: string, helpText: string, history?: MetricDataPoint[], color: string, minX?: number, maxX?: number }) => (
   <Stat
     p={5}
     shadow="md"
@@ -164,11 +163,11 @@ const MetricCard = ({ label, value, helpText, history, color }: { label: string,
     <StatLabel fontWeight="bold" color="gray.600" zIndex={2} position="relative" pointerEvents="none">{label}</StatLabel>
     <StatNumber fontSize="3xl" color={colors.dbBlue} zIndex={2} position="relative" pointerEvents="none">{value}</StatNumber>
     <StatHelpText zIndex={2} position="relative" pointerEvents="none">{helpText}</StatHelpText>
-    {history && (
+    {history && minX !== undefined && maxX !== undefined && (
       <Box position="absolute" bottom={0} left={0} right={0} height="80px" zIndex={1}>
         <ParentSize>
           {({ width, height }) => (
-            <Sparkline data={history} width={width} height={height} color={color} />
+            <Sparkline data={history} width={width} height={height} color={color} minX={minX} maxX={maxX} />
           )}
         </ParentSize>
       </Box>
@@ -205,6 +204,10 @@ export const MetricsPage: React.FC = () => {
   // Adjust start/end based on timeWindow (half of window before, half after 'now' for perspective)
   const start = useMemo(() => new Date(stabilizedNow.getTime() - 1000 * 60 * (timeWindow / 2)), [stabilizedNow, timeWindow]);
   const end = useMemo(() => new Date(stabilizedNow.getTime() + 1000 * 60 * (timeWindow / 2)), [stabilizedNow, timeWindow]);
+
+  // Domain for metrics sparklines (always last durationMinutes)
+  const metricsMinX = useMemo(() => stabilizedNow.getTime() - 1000 * 60 * timeWindow, [stabilizedNow, timeWindow]);
+  const metricsMaxX = useMemo(() => stabilizedNow.getTime(), [stabilizedNow]);
 
   const { data: metrics, isLoading: metricsLoading } = useQuery([METRICS_QUERY_KEY, timeWindow], () => getMetrics(timeWindow), {
     refetchInterval: false,
@@ -250,46 +253,53 @@ export const MetricsPage: React.FC = () => {
       {metricsLoading && !metrics ? (
         <Box p={10}>Loading metrics...</Box>
       ) : (
-        <>
-          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={10}>
-            <MetricCard
-              label="Throughput"
-              value={metrics ? `${metrics.throughput.toFixed(2)}/s` : '0.00/s'}
-              helpText="Avg executions / sec"
-              history={metrics?.throughputHistory}
-              color={colors.running['300']}
-            />
-            <MetricCard
-              label="Successes"
-              value={metrics ? metrics.successCount.toString() : '0'}
-              helpText={`Total successful in window`}
-              history={metrics?.successHistory}
-              color={colors.success['100']}
-            />
-            <MetricCard
-              label="Failures"
-              value={metrics ? metrics.failureCount.toString() : '0'}
-              helpText={`Total failed in window`}
-              history={metrics?.failureHistory}
-              color={colors.failed['200']}
-            />
-          </SimpleGrid>
-
-          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={10}>
-            <MetricCard
-              label="Worker Saturation"
-              value={metrics ? `${(metrics.workerSaturation * 100).toFixed(1)}%` : '0%'}
-              helpText="Current threadpool usage"
-              color="#805AD5"
-            />
-            <MetricCard
-              label="Queue Backpressure"
-              value={metrics ? metrics.queueBackpressure.toString() : '0'}
-              helpText="Currently enqueued tasks"
-              color="#DD6B20"
-            />
-          </SimpleGrid>
-        </>
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={10}>
+          <MetricCard
+            label="Throughput"
+            value={metrics ? `${metrics.throughput.toFixed(2)}/s` : '0.00/s'}
+            helpText="Avg executions / sec"
+            history={metrics?.throughputHistory}
+            color={colors.running['300']}
+            minX={metricsMinX}
+            maxX={metricsMaxX}
+          />
+          <MetricCard
+            label="Successes"
+            value={metrics ? metrics.successCount.toString() : '0'}
+            helpText={`Total successful in window`}
+            history={metrics?.successHistory}
+            color={colors.success['100']}
+            minX={metricsMinX}
+            maxX={metricsMaxX}
+          />
+          <MetricCard
+            label="Failures"
+            value={metrics ? metrics.failureCount.toString() : '0'}
+            helpText={`Total failed in window`}
+            history={metrics?.failureHistory}
+            color={colors.failed['200']}
+            minX={metricsMinX}
+            maxX={metricsMaxX}
+          />
+          <MetricCard
+            label="Worker Saturation"
+            value={metrics ? `${(metrics.workerSaturation * 100).toFixed(1)}%` : '0%'}
+            helpText="Current threadpool usage"
+            history={metrics?.workerSaturationHistory}
+            color="#805AD5"
+            minX={metricsMinX}
+            maxX={metricsMaxX}
+          />
+          <MetricCard
+            label="Queue Backpressure"
+            value={metrics ? metrics.queueBackpressure.toString() : '0'}
+            helpText="Currently enqueued tasks"
+            history={metrics?.queueBackpressureHistory}
+            color="#DD6B20"
+            minX={metricsMinX}
+            maxX={metricsMaxX}
+          />
+        </SimpleGrid>
       )}
 
       <Box pt={4}>
@@ -298,17 +308,20 @@ export const MetricsPage: React.FC = () => {
           {timelineLoading && !timeline ? (
             <Box p={10}>Loading timeline...</Box>
           ) : (
-            <ParentSize>
+            <ParentSize debounceTime={50}>
               {({ width, height }) => (
                 width > 0 && height > 0 && timeline ? (
-                  <TimelineChart 
-                    width={width} 
-                    height={height} 
-                    timeline={timeline} 
-                    now={now} 
-                    start={start} 
-                    end={end} 
-                  />
+                  <>
+                    {console.log('Rendering Timeline with:', timeline)}
+                    <TimelineChart 
+                      width={width} 
+                      height={height} 
+                      timeline={timeline} 
+                      now={now} 
+                      start={start} 
+                      end={end} 
+                    />
+                  </>
                 ) : null
               )}
             </ParentSize>

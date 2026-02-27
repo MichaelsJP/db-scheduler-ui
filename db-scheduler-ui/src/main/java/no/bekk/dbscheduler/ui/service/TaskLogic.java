@@ -145,6 +145,7 @@ public class TaskLogic {
     if (!showData) {
       tasks.forEach(e -> e.setTaskData(List.of()));
     }
+    tasks = QueryUtils.filterTasksByTime(tasks, params.getStartTime(), params.getEndTime());
     tasks =
         QueryUtils.sortTasks(
             QueryUtils.filterTasks(tasks, params.getFilter()), params.getSorting(), params.isAsc());

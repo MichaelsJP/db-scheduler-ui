@@ -33,6 +33,8 @@ public class MetricsModel {
   private List<MetricDataPoint> throughputHistory;
   private List<MetricDataPoint> successHistory;
   private List<MetricDataPoint> failureHistory;
+  private List<MetricDataPoint> workerSaturationHistory;
+  private List<MetricDataPoint> queueBackpressureHistory;
 
   @Getter
   @Setter

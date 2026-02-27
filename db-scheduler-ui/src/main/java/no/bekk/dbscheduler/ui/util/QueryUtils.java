@@ -103,6 +103,21 @@ public class QueryUtils {
         .collect(Collectors.toList());
   }
 
+  public static List<TaskModel> filterTasksByTime(List<TaskModel> tasks, Instant start, Instant end) {
+    if (start == null && end == null) {
+      return tasks;
+    }
+    return tasks.stream()
+        .filter(task -> {
+          Instant taskTime = task.getExecutionTime().stream().min(Instant::compareTo).orElse(null);
+          if (taskTime == null) return true;
+          boolean afterStart = start == null || !taskTime.isBefore(start);
+          boolean beforeEnd = end == null || !taskTime.isAfter(end);
+          return afterStart && beforeEnd;
+        })
+        .collect(Collectors.toList());
+  }
+
   public static List<TaskModel> searchByTaskName(
       List<TaskModel> tasks, String searchTermTaskName, boolean isExactMatch) {
     return search(tasks, searchTermTaskName, true, isExactMatch);

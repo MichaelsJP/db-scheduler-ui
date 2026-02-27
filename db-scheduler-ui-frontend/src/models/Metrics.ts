@@ -25,4 +25,6 @@ export type Metrics = {
   throughputHistory?: MetricDataPoint[];
   successHistory?: MetricDataPoint[];
   failureHistory?: MetricDataPoint[];
+  workerSaturationHistory?: MetricDataPoint[];
+  queueBackpressureHistory?: MetricDataPoint[];
 };

@@ -34,7 +34,7 @@ public class TimelineLogic {
   public TimelineModel getTimeline(Instant start, Instant end) {
     TaskDetailsRequestParams logParams = new TaskDetailsRequestParams(
         TaskRequestParams.TaskFilter.ALL,
-        0, 100, // Limit to 100 for timeline view
+        0, 1000, // Limit to 1000 for timeline view
         TaskRequestParams.TaskSort.DEFAULT,
         true,
         null, null, false, false,
@@ -45,7 +45,7 @@ public class TimelineLogic {
 
     TaskRequestParams taskParams = new TaskRequestParams(
         TaskRequestParams.TaskFilter.ALL,
-        0, 100,
+        0, 1000,
         TaskRequestParams.TaskSort.DEFAULT,
         true,
         null, null, false, false,
