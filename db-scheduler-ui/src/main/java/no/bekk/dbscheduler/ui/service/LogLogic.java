@@ -14,6 +14,8 @@
 package no.bekk.dbscheduler.ui.service;
 
 import com.github.kagkarlsson.scheduler.serializer.Serializer;
+import io.rocketbase.extension.LogRepository;
+import io.rocketbase.extension.jdbc.JdbcLogRepository;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -44,6 +46,7 @@ public class LogLogic {
   private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
   private final Caching caching;
   private final LogModelRowMapper logModelRowMapper;
+  private final LogRepository logRepository;
   private final String logTableName;
   private final String databaseProductName;
   private final int logLimit;
@@ -54,7 +57,8 @@ public class LogLogic {
       Caching caching,
       boolean showData,
       String logTableName,
-      int logLimit) {
+      int logLimit,
+      LogRepository logRepository) {
     try (Connection connection = dataSource.getConnection()) {
       DatabaseMetaData metaData = connection.getMetaData();
       databaseProductName = metaData.getDatabaseProductName();
@@ -67,14 +71,16 @@ public class LogLogic {
     this.caching = caching;
     this.logTableName = logTableName;
     this.logLimit = logLimit;
+    this.logRepository = logRepository;
     this.logModelRowMapper =
         new LogModelRowMapper(
             showData, serializer == null ? Serializer.DEFAULT_JAVA_SERIALIZER : serializer);
   }
 
   public GetLogsResponse getLogs(TaskDetailsRequestParams requestParams) {
+    boolean hasTags = requestParams.getTags() != null && !requestParams.getTags().isEmpty();
     List<LogModel> logs =
-        caching.getLogsFromCacheOrDB(requestParams.isRefresh(), this, requestParams);
+        caching.getLogsFromCacheOrDB(requestParams.isRefresh() || hasTags, this, requestParams);
     List<LogModel> pagedLogs =
         QueryUtils.paginate(logs, requestParams.getPageNumber(), requestParams.getSize());
 
@@ -256,8 +262,8 @@ public class LogLogic {
       if ("PostgreSQL".equalsIgnoreCase(databaseProductName)) {
         return "tags && :tags::text[]";
       }
-      // Fallback or other databases not yet supported
-      return "1=1";
+      // If not PostgreSQL, we assume tags might be stored as VARCHAR/TEXT if they exist at all
+      return "1=1"; 
     }
 
     @Override
@@ -339,11 +345,6 @@ public class LogLogic {
   }
 
   public List<String> getTags() {
-    if ("PostgreSQL".equalsIgnoreCase(databaseProductName)) {
-      return namedParameterJdbcTemplate.query(
-          "SELECT DISTINCT unnest(tags) FROM " + logTableName,
-          (rs, rowNum) -> rs.getString(1));
-    }
-    return java.util.Collections.emptyList();
+    return logRepository.getTags();
   }
 }

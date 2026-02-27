@@ -13,6 +13,8 @@
  */
 package no.bekk.dbscheduler.ui.model;
 
+import java.util.List;
+import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -28,4 +30,16 @@ public class MetricsModel {
   private double queueBackpressure;
   private int successCount;
   private int failureCount;
+  private List<MetricDataPoint> throughputHistory;
+  private List<MetricDataPoint> successHistory;
+  private List<MetricDataPoint> failureHistory;
+
+  @Getter
+  @Setter
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class MetricDataPoint {
+    private Instant timestamp;
+    private double value;
+  }
 }

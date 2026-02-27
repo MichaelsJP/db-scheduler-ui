@@ -22,6 +22,7 @@ import {
   MenuOptionGroup,
   HStack,
   Text,
+  VStack,
 } from '@chakra-ui/react';
 import { ChevronDownIcon } from '@chakra-ui/icons';
 import { useQuery } from '@tanstack/react-query';
@@ -49,7 +50,7 @@ export const TagFilter: React.FC<TagFilterProps> = ({
   };
 
   return (
-    <VStack align="start" mt={4} ml={1} spacing={2} w="full">
+    <VStack align="start" spacing={2} w="full">
       <HStack spacing={2} align="center">
         <Menu closeOnSelect={false}>
           <MenuButton
@@ -96,7 +97,7 @@ export const TagFilter: React.FC<TagFilterProps> = ({
           </Button>
         )}
       </HStack>
-      <HStack wrap="wrap" spacing={2} mt={1}>
+      <HStack wrap="wrap" spacing={2}>
         {selectedTags.map((tag) => (
           <TagBadge
             key={tag}
@@ -109,5 +110,3 @@ export const TagFilter: React.FC<TagFilterProps> = ({
     </VStack>
   );
 };
-
-import { VStack } from '@chakra-ui/react';

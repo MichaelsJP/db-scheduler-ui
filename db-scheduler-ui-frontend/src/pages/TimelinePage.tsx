@@ -25,7 +25,7 @@ import { Timeline } from 'src/models/Timeline';
 import { Log } from 'src/models/Log';
 import { Task } from 'src/models/Task';
 
-interface TimelineChartProps {
+export interface TimelineChartProps {
   width: number;
   height: number;
   timeline: Timeline;
@@ -34,7 +34,7 @@ interface TimelineChartProps {
   end: Date;
 }
 
-const TimelineChart = ({ width, height, timeline, now, start, end }: TimelineChartProps) => {
+export const TimelineChart = ({ width, height, timeline, now, start, end }: TimelineChartProps) => {
   const margin = { top: 40, right: 40, bottom: 60, left: 40 };
 
   const xScale = useMemo(() => scaleTime({

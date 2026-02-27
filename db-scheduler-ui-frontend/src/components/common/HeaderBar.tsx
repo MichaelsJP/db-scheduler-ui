@@ -189,6 +189,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               </Checkbox>
             </VStack>
           </HStack>
+        </Box>
+        <Box ml={8} pt={7}>
           <TagFilter selectedTags={selectedTags} setSelectedTags={setSelectedTags} />
         </Box>
       </Box>

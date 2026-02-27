@@ -78,9 +78,12 @@ public class Caching {
 
   public List<LogModel> getLogsFromCacheOrDB(
       boolean isRefresh, LogLogic logLogic, TaskDetailsRequestParams requestParams) {
-    if (isRefresh || logCache.isEmpty()) {
+    boolean hasTags = requestParams.getTags() != null && !requestParams.getTags().isEmpty();
+    if (isRefresh || logCache.isEmpty() || hasTags) {
       List<LogModel> logs = logLogic.getLogsDirectlyFromDB(requestParams);
-      updateLogCache(logs);
+      if (!hasTags) {
+        updateLogCache(logs);
+      }
       return logs;
     } else {
       return new ArrayList<>(logCache.values());

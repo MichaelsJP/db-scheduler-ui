@@ -12,15 +12,12 @@
  * limitations under the License.
  */
 import { Metrics } from 'src/models/Metrics';
-
-const API_BASE_URL: string =
-  (import.meta.env.VITE_API_BASE_URL as string) ??
-  window.location.origin + (window.CONTEXT_PATH || '') + '/db-scheduler-api';
+import { API_BASE_URL } from 'src/utils/config';
 
 export const METRICS_QUERY_KEY = `metrics`;
 
-export const getMetrics = async (): Promise<Metrics> => {
-  const response = await fetch(`${API_BASE_URL}/metrics`, {
+export const getMetrics = async (durationMinutes: number = 60): Promise<Metrics> => {
+  const response = await fetch(`${API_BASE_URL}/metrics?durationMinutes=${durationMinutes}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',

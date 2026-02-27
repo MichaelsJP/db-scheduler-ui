@@ -11,10 +11,18 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
+export type MetricDataPoint = {
+  timestamp: string;
+  value: number;
+};
+
 export type Metrics = {
   workerSaturation: number;
   throughput: number;
   queueBackpressure: number;
   successCount: number;
   failureCount: number;
+  throughputHistory?: MetricDataPoint[];
+  successHistory?: MetricDataPoint[];
+  failureHistory?: MetricDataPoint[];
 };

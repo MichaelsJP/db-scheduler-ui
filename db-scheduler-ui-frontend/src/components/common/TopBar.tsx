@@ -77,12 +77,11 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
         {title}
       </Text>
       <HStack spacing={0} h="64px">
-        <NavButton label="Scheduled" to="/" isActive={location.pathname === '/' || (!location.pathname.includes('/history') && !location.pathname.includes('/metrics') && !location.pathname.includes('/timeline'))} />
         <NavButton label="Overview" to="/metrics" isActive={location.pathname.includes('/metrics')} />
+        <NavButton label="Scheduled" to="/" isActive={location.pathname === '/' || (!location.pathname.includes('/history') && !location.pathname.includes('/metrics') && !location.pathname.includes('/timeline'))} />
         {showHistory && (
           <NavButton label="History" to="/history/all" isActive={location.pathname.includes('/history')} />
         )}
-        <NavButton label="Timeline" to="/timeline" isActive={location.pathname.includes('/timeline')} />
       </HStack>
     </Box>
   );

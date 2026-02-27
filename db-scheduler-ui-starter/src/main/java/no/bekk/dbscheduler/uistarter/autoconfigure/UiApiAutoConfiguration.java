@@ -19,6 +19,7 @@ import static no.bekk.dbscheduler.uistarter.config.DbSchedulerUiUtil.normalizePa
 import com.github.kagkarlsson.scheduler.Scheduler;
 import com.github.kagkarlsson.scheduler.boot.config.DbSchedulerCustomizer;
 import com.github.kagkarlsson.scheduler.serializer.Serializer;
+import io.rocketbase.extension.LogRepository;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import javax.sql.DataSource;
@@ -95,6 +96,7 @@ public class UiApiAutoConfiguration {
       Caching caching,
       DbSchedulerCustomizer customizer,
       DbSchedulerUiProperties properties,
+      LogRepository logRepository,
       @Value("${db-scheduler-log.table-name:scheduled_execution_logs}") String logTableName,
       @Value("${db-scheduler-ui.log-limit:0}") int logLimit) {
     return new LogLogic(
@@ -103,7 +105,8 @@ public class UiApiAutoConfiguration {
         caching,
         properties.isTaskData(),
         logTableName,
-        logLimit);
+        logLimit,
+        logRepository);
   }
 
   @Bean
