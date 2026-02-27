@@ -28,17 +28,18 @@ import no.bekk.dbscheduler.ui.util.QueryUtils;
 import no.bekk.dbscheduler.ui.util.mapper.TaskMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import java.util.Optional;
 
 public class MetricsLogic {
 
   private final Scheduler scheduler;
   private final Caching caching;
-  private final LogLogic logLogic;
+  private final Optional<LogLogic> logLogic;
   private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
   private final String logTableName;
   private final String databaseProductName;
 
-  public MetricsLogic(Scheduler scheduler, DataSource dataSource, String logTableName, Caching caching, LogLogic logLogic) {
+  public MetricsLogic(Scheduler scheduler, DataSource dataSource, String logTableName, Caching caching, Optional<LogLogic> logLogic) {
     this.scheduler = scheduler;
     this.caching = caching;
     this.logLogic = logLogic;
@@ -99,7 +100,7 @@ public class MetricsLogic {
         no.bekk.dbscheduler.ui.model.TaskRequestParams.TaskFilter.ALL,
         0, 100, no.bekk.dbscheduler.ui.model.TaskRequestParams.TaskSort.DEFAULT,
         true, null, null, false, false, streamStart, streamEnd, null, null, true, null);
-    List<LogModel> recentLogs = logLogic.getLogsDirectlyFromDB(logParams);
+    List<LogModel> recentLogs = logLogic.map(logic -> logic.getLogsDirectlyFromDB(logParams)).orElse(new ArrayList<>());
 
     List<com.github.kagkarlsson.scheduler.ScheduledExecution<Object>> executions =
         caching.getExecutionsFromCacheOrDB(true, scheduler);
