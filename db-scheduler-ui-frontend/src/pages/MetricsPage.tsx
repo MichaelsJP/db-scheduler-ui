@@ -68,7 +68,9 @@ const Sparkline = ({ data, width, height, color }: { data: MetricDataPoint[], wi
   const handleTooltip = useCallback(
     (event: React.MouseEvent | React.TouchEvent) => {
       if (!data || data.length === 0) return;
-      const { x } = localPoint(event) || { x: 0 };
+      const point = localPoint(event);
+      if (!point) return;
+      const { x } = point;
       const x0 = xScale.invert(x);
       const index = bisectDate(data, x0, 1);
       const d0 = data[index - 1];
@@ -131,15 +133,17 @@ const Sparkline = ({ data, width, height, color }: { data: MetricDataPoint[], wi
             ...defaultStyles,
             backgroundColor: color,
             color: 'white',
-            fontSize: '10px',
-            padding: '2px 6px',
-            borderRadius: '4px',
-            transform: 'translate(-50%, -120%)',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-            zIndex: 10,
+            fontSize: '12px',
+            fontWeight: 'bold',
+            padding: '4px 8px',
+            borderRadius: '6px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            zIndex: 100,
+            border: '2px solid white',
+            transform: 'translate(-50%, -130%)',
           }}
         >
-          {tooltipData.value.toFixed(2)}
+          {tooltipData.value % 1 === 0 ? tooltipData.value : tooltipData.value.toFixed(2)}
         </TooltipWithBounds>
       )}
     </Box>
@@ -155,12 +159,12 @@ const MetricCard = ({ label, value, helpText, history, color }: { label: string,
     borderRadius="xl"
     bg="white"
     position="relative"
-    overflow="hidden"
+    overflow="visible"
     minH="150px"
   >
-    <StatLabel fontWeight="bold" color="gray.600">{label}</StatLabel>
-    <StatNumber fontSize="3xl" color={colors.dbBlue} zIndex={2} position="relative">{value}</StatNumber>
-    <StatHelpText zIndex={2} position="relative">{helpText}</StatHelpText>
+    <StatLabel fontWeight="bold" color="gray.600" zIndex={2} position="relative" pointerEvents="none">{label}</StatLabel>
+    <StatNumber fontSize="3xl" color={colors.dbBlue} zIndex={2} position="relative" pointerEvents="none">{value}</StatNumber>
+    <StatHelpText zIndex={2} position="relative" pointerEvents="none">{helpText}</StatHelpText>
     {history && (
       <Box position="absolute" bottom={0} left={0} right={0} height="80px" zIndex={1}>
         <ParentSize>
