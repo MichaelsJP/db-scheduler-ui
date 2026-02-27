@@ -45,27 +45,27 @@ public class MetricsLogic {
     MapSqlParameterSource params = new MapSqlParameterSource()
         .addValue("startTime", java.sql.Timestamp.from(startTime));
     
-    Integer completedInWindow = namedParameterJdbcTemplate.queryForObject(
+    Long completedInWindow = namedParameterJdbcTemplate.queryForObject(
         "SELECT COUNT(*) FROM " + logTableName + " WHERE time_finished >= :startTime",
         params,
-        Integer.class);
+        Long.class);
     
     double throughput = completedInWindow != null ? (double) completedInWindow / (durationMinutes * 60.0) : 0.0;
 
-    Integer scheduledTasks = namedParameterJdbcTemplate.getJdbcTemplate().queryForObject(
+    Long scheduledTasks = namedParameterJdbcTemplate.getJdbcTemplate().queryForObject(
         "SELECT COUNT(*) FROM scheduled_tasks WHERE picked = FALSE",
-        Integer.class);
+        Long.class);
     double queueBackpressure = scheduledTasks != null ? scheduledTasks.doubleValue() : 0.0;
 
-    Integer successCount = namedParameterJdbcTemplate.queryForObject(
+    Long successCount = namedParameterJdbcTemplate.queryForObject(
         "SELECT COUNT(*) FROM " + logTableName + " WHERE time_finished >= :startTime AND succeeded = TRUE",
         params,
-        Integer.class);
+        Long.class);
     
-    Integer failureCount = namedParameterJdbcTemplate.queryForObject(
+    Long failureCount = namedParameterJdbcTemplate.queryForObject(
         "SELECT COUNT(*) FROM " + logTableName + " WHERE time_finished >= :startTime AND succeeded = FALSE",
         params,
-        Integer.class);
+        Long.class);
 
     // Generate historical data points (e.g., 20 points for the sparklines)
     List<MetricDataPoint> throughputHistory = getHistory(startTime, durationMinutes, null);
@@ -76,8 +76,8 @@ public class MetricsLogic {
         workerSaturation,
         throughput,
         queueBackpressure,
-        successCount != null ? successCount : 0,
-        failureCount != null ? failureCount : 0,
+        successCount != null ? successCount.intValue() : 0,
+        failureCount != null ? failureCount.intValue() : 0,
         throughputHistory,
         successHistory,
         failureHistory
@@ -102,7 +102,7 @@ public class MetricsLogic {
         query += " AND succeeded = " + (succeeded ? "TRUE" : "FALSE");
       }
       
-      Integer count = namedParameterJdbcTemplate.queryForObject(query, params, Integer.class);
+      Long count = namedParameterJdbcTemplate.queryForObject(query, params, Long.class);
       history.add(new MetricDataPoint(bucketEnd, count != null ? count.doubleValue() : 0.0));
     }
     return history;

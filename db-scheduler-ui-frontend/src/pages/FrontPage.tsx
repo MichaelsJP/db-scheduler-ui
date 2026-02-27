@@ -16,7 +16,6 @@ import { Route, Routes } from 'react-router-dom';
 import { TopBar } from 'src/components/common/TopBar';
 import { LogList } from 'src/components/history/LogList';
 import { MetricsPage } from 'src/pages/MetricsPage';
-import { TimelinePage } from 'src/pages/TimelinePage';
 import TaskList from 'src/components/scheduled/TaskList';
 import { getShowHistory } from 'src/utils/config';
 import React from 'react';
@@ -40,7 +39,6 @@ export const FrontPage: React.FC = () => {
             <Route path="/history/all" element={<LogList />}></Route>
           )}
           <Route path="/metrics" element={<MetricsPage />}></Route>
-          <Route path="/timeline" element={<TimelinePage />}></Route>
         </Routes>
       </Box>
     </Box>

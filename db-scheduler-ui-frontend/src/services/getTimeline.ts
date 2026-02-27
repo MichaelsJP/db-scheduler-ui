@@ -12,10 +12,7 @@
  * limitations under the License.
  */
 import { Timeline } from 'src/models/Timeline';
-
-const API_BASE_URL: string =
-  (import.meta.env.VITE_API_BASE_URL as string) ??
-  window.location.origin + (window.CONTEXT_PATH || '') + '/db-scheduler-api';
+import { API_BASE_URL } from 'src/utils/config';
 
 export const TIMELINE_QUERY_KEY = `timeline`;
 

@@ -39,6 +39,7 @@ public class MetricsModel {
   @NoArgsConstructor
   @AllArgsConstructor
   public static class MetricDataPoint {
+    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
     private Instant timestamp;
     private double value;
   }

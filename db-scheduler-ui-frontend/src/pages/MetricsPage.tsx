@@ -77,14 +77,18 @@ const MetricCard = ({ label, value, helpText, history, color }: { label: string,
     bg="white"
     position="relative"
     overflow="hidden"
-    minH="120px"
+    minH="150px"
   >
     <StatLabel fontWeight="bold" color="gray.600">{label}</StatLabel>
-    <StatNumber fontSize="3xl" color={colors.dbBlue} zIndex={1} position="relative">{value}</StatNumber>
-    <StatHelpText zIndex={1} position="relative">{helpText}</StatHelpText>
+    <StatNumber fontSize="3xl" color={colors.dbBlue} zIndex={2} position="relative">{value}</StatNumber>
+    <StatHelpText zIndex={2} position="relative">{helpText}</StatHelpText>
     {history && (
-      <Box position="absolute" bottom={0} left={0} right={0} height="60px" pointerEvents="none">
-        <Sparkline data={history} width={400} height={60} color={color} />
+      <Box position="absolute" bottom={0} left={0} right={0} height="80px" pointerEvents="none" zIndex={1}>
+        <ParentSize>
+          {({ width, height }) => (
+            <Sparkline data={history} width={width} height={height} color={color} />
+          )}
+        </ParentSize>
       </Box>
     )}
   </Stat>
@@ -153,21 +157,21 @@ export const MetricsPage: React.FC = () => {
           value={metrics ? `${metrics.throughput.toFixed(2)}/s` : '0.00/s'}
           helpText="Avg executions / sec"
           history={metrics?.throughputHistory}
-          color="blue.300"
+          color={colors.running['300']}
         />
         <MetricCard
           label="Successes"
           value={metrics ? metrics.successCount.toString() : '0'}
           helpText={`Total successful in window`}
           history={metrics?.successHistory}
-          color="green.300"
+          color={colors.success['100']}
         />
         <MetricCard
           label="Failures"
           value={metrics ? metrics.failureCount.toString() : '0'}
           helpText={`Total failed in window`}
           history={metrics?.failureHistory}
-          color="red.300"
+          color={colors.failed['200']}
         />
       </SimpleGrid>
 
@@ -176,13 +180,13 @@ export const MetricsPage: React.FC = () => {
           label="Worker Saturation"
           value={metrics ? `${(metrics.workerSaturation * 100).toFixed(1)}%` : '0%'}
           helpText="Current threadpool usage"
-          color="purple.300"
+          color="#805AD5"
         />
         <MetricCard
           label="Queue Backpressure"
           value={metrics ? metrics.queueBackpressure.toString() : '0'}
           helpText="Currently enqueued tasks"
-          color="orange.300"
+          color="#DD6B20"
         />
       </SimpleGrid>
 

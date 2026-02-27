@@ -27,7 +27,8 @@
     "@visx/scale": "^3.10.1",
     "@visx/shape": "^3.10.1",
     "@visx/tooltip": "^3.10.1",
-    "@visx/responsive": "^3.10.1"
+    "@visx/responsive": "^3.10.1",
+    "@visx/curve": "^3.0.0"
   },
   "devDependencies": {
     "@tanstack/react-query-devtools": "^4.33.0",
