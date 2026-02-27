@@ -42,7 +42,7 @@ import { useRefresh } from 'src/context/RefreshContext';
 
 const bisectDate = bisector<MetricDataPoint, Date>(d => new Date(d.timestamp)).left;
 
-const Sparkline = ({ data, width, height, color, minX, maxX }: { data: MetricDataPoint[], width: number, height: number, color: string, minX: number, maxX: number }) => {
+const Sparkline = React.memo(({ data, width, height, color, minX, maxX }: { data: MetricDataPoint[], width: number, height: number, color: string, minX: number, maxX: number }) => {
   const {
     showTooltip,
     hideTooltip,
@@ -125,7 +125,7 @@ const Sparkline = ({ data, width, height, color, minX, maxX }: { data: MetricDat
       </svg>
       {tooltipData && (
         <TooltipWithBounds
-          key={Math.random()}
+          key={`tooltip-${tooltipData.timestamp}-${tooltipData.value}`}
           top={tooltipTop - 10}
           left={tooltipLeft}
           style={{
@@ -148,7 +148,7 @@ const Sparkline = ({ data, width, height, color, minX, maxX }: { data: MetricDat
       )}
     </Box>
   );
-};
+});
 
 const MetricCard = ({ label, value, helpText, history, color, minX, maxX }: { label: string, value: string, helpText: string, history?: MetricDataPoint[], color: string, minX?: number, maxX?: number }) => (
   <Stat
@@ -240,6 +240,7 @@ export const MetricsPage: React.FC = () => {
       ) : (
         <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={10}>
           <MetricCard
+            key="throughput"
             label="Throughput"
             value={metrics ? `${metrics.throughput.toFixed(2)}/s` : '0.00/s'}
             helpText="Avg executions / sec"
@@ -249,6 +250,7 @@ export const MetricsPage: React.FC = () => {
             maxX={metricsMaxX}
           />
           <MetricCard
+            key="successes"
             label="Successes"
             value={metrics ? metrics.successCount.toString() : '0'}
             helpText={`Total successful in window`}
@@ -258,6 +260,7 @@ export const MetricsPage: React.FC = () => {
             maxX={metricsMaxX}
           />
           <MetricCard
+            key="failures"
             label="Failures"
             value={metrics ? metrics.failureCount.toString() : '0'}
             helpText={`Total failed in window`}
@@ -267,6 +270,7 @@ export const MetricsPage: React.FC = () => {
             maxX={metricsMaxX}
           />
           <MetricCard
+            key="saturation"
             label="Worker Saturation"
             value={metrics ? `${(metrics.workerSaturation * 100).toFixed(1)}%` : '0%'}
             helpText="Current threadpool usage"
@@ -276,6 +280,7 @@ export const MetricsPage: React.FC = () => {
             maxX={metricsMaxX}
           />
           <MetricCard
+            key="backpressure"
             label="Queue Backpressure"
             value={metrics ? metrics.queueBackpressure.toString() : '0'}
             helpText="Currently enqueued tasks"
