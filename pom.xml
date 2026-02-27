@@ -83,6 +83,10 @@
             <pluginRepository>
                 <id>jitpack.io</id>
                 <url>https://jitpack.io</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
             </pluginRepository>
         </pluginRepositories>
 
@@ -90,6 +94,10 @@
             <repository>
                 <id>jitpack.io</id>
                 <url>https://jitpack.io</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
             </repository>
         </repositories>
 
@@ -111,19 +119,19 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
-                <groupId>com.github.kagkarlsson</groupId>
+                <groupId>com.github.MichaelsJP</groupId>
                 <artifactId>db-scheduler</artifactId>
-                <version>${db-scheduler.version}</version>
+                <version>main-SNAPSHOT</version>
             </dependency>
             <dependency>
-                <groupId>com.github.kagkarlsson</groupId>
+                <groupId>com.github.MichaelsJP</groupId>
                 <artifactId>db-scheduler-spring-boot-4-starter</artifactId>
-                <version>${db-scheduler-boot4.version}</version>
+                <version>main-SNAPSHOT</version>
             </dependency>
             <dependency>
-                <groupId>com.github.kagkarlsson</groupId>
+                <groupId>com.github.MichaelsJP</groupId>
                 <artifactId>db-scheduler-spring-boot-starter</artifactId>
-                <version>${db-scheduler.version}</version>
+                <version>main-SNAPSHOT</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
