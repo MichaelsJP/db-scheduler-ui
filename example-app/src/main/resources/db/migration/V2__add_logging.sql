@@ -11,7 +11,8 @@ create table scheduled_execution_logs
     duration_ms          BIGINT                   not null,
     exception_class      text,
     exception_message    text,
-    exception_stacktrace text
+    exception_stacktrace text,
+    tags                 text
 );
 
 CREATE INDEX stl_started_idx ON scheduled_execution_logs (time_started);

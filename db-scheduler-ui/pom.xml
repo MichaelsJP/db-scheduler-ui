@@ -18,7 +18,7 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.github.MichaelsJP</groupId>
+            <groupId>com.github.MichaelsJP.db-scheduler</groupId>
             <artifactId>db-scheduler</artifactId>
             <version>main-SNAPSHOT</version>
         </dependency>

@@ -21,18 +21,18 @@ import lombok.Getter;
 @Getter
 public class GetTasksResponse {
 
-  private final int numberOfItems;
-  private final int numberOfPages;
+  private final Integer numberOfItems;
+  private final Integer numberOfPages;
   private final List<TaskModel> items;
 
   @JsonCreator
   public GetTasksResponse(
-      @JsonProperty("numberOfItems") int totalTasks,
+      @JsonProperty("numberOfItems") Integer totalTasks,
       @JsonProperty("items") List<TaskModel> pagedTasks,
       @JsonProperty("pageSize") Integer pageSize) {
     this.numberOfItems = totalTasks;
     this.numberOfPages =
-        (totalTasks == 0 || pageSize == null || pageSize == 0)
+        (totalTasks == null || totalTasks == 0 || pageSize == null || pageSize == 0)
             ? 0
             : (int) Math.ceil((double) totalTasks / pageSize);
     this.items = pagedTasks;

@@ -21,17 +21,20 @@ import lombok.Getter;
 @Getter
 public class GetLogsResponse {
 
-  private final int numberOfItems;
-  private final int numberOfPages;
+  private final Integer numberOfItems;
+  private final Integer numberOfPages;
   private final List<LogModel> items;
 
   @JsonCreator
   public GetLogsResponse(
-      @JsonProperty("numberOfItems") int totalLogs,
+      @JsonProperty("numberOfItems") Integer totalLogs,
       @JsonProperty("items") List<LogModel> pagedLogs,
-      @JsonProperty("pageSize") int pageSize) {
+      @JsonProperty("pageSize") Integer pageSize) {
     this.numberOfItems = totalLogs;
-    this.numberOfPages = totalLogs == 0 ? 0 : (int) Math.ceil((double) totalLogs / pageSize);
+    this.numberOfPages =
+        (totalLogs == null || totalLogs == 0 || pageSize == null || pageSize == 0)
+            ? 0
+            : (int) Math.ceil((double) totalLogs / pageSize);
     this.items = pagedLogs;
   }
 }
