@@ -23,12 +23,12 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
-                <groupId>com.github.MichaelsJP</groupId>
+                <groupId>com.github.MichaelsJP.db-scheduler</groupId>
                 <artifactId>db-scheduler</artifactId>
                 <version>main-SNAPSHOT</version>
             </dependency>
             <dependency>
-                <groupId>com.github.MichaelsJP</groupId>
+                <groupId>com.github.MichaelsJP.db-scheduler</groupId>
                 <artifactId>db-scheduler-spring-boot-4-starter</artifactId>
                 <version>main-SNAPSHOT</version>
             </dependency>
@@ -42,7 +42,7 @@
             <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>com.github.MichaelsJP</groupId>
+            <groupId>com.github.MichaelsJP.db-scheduler</groupId>
             <artifactId>db-scheduler-spring-boot-4-starter</artifactId>
             <version>main-SNAPSHOT</version>
         </dependency>
