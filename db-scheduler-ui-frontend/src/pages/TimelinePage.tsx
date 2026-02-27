@@ -11,15 +11,17 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Box, Heading, VStack, Button, HStack } from '@chakra-ui/react';
+import { Box, Heading, VStack, Button, HStack, Text } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { getTimeline, TIMELINE_QUERY_KEY } from 'src/services/getTimeline';
 import { Group } from '@visx/group';
 import { AxisBottom } from '@visx/axis';
 import { scaleTime } from '@visx/scale';
 import { GridColumns } from '@visx/grid';
 import { ParentSize } from '@visx/responsive';
+import { useTooltip, TooltipWithBounds, defaultStyles } from '@visx/tooltip';
+import { localPoint } from '@visx/event';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Timeline } from 'src/models/Timeline';
 import { Log } from 'src/models/Log';
@@ -34,104 +36,169 @@ export interface TimelineChartProps {
   end: Date;
 }
 
+interface TooltipData {
+  name: string;
+  id: string;
+  status: 'succeeded' | 'failed' | 'running' | 'scheduled';
+  time: string;
+}
+
 export const TimelineChart = ({ width, height, timeline, now, start, end }: TimelineChartProps) => {
   const margin = { top: 40, right: 40, bottom: 60, left: 40 };
+  const {
+    showTooltip,
+    hideTooltip,
+    tooltipData,
+    tooltipLeft = 0,
+    tooltipTop = 0,
+  } = useTooltip<TooltipData>();
 
   const xScale = useMemo(() => scaleTime({
     domain: [start, end],
     range: [margin.left, width - margin.right],
-  }), [start, end, width, margin.left, margin.right]);
+  }), [start, end, width]);
+
+  const handleHover = useCallback((event: React.MouseEvent, data: TooltipData, x: number, y: number) => {
+    const point = localPoint(event);
+    if (!point) return;
+    showTooltip({
+      tooltipData: data,
+      tooltipLeft: x,
+      tooltipTop: y,
+    });
+  }, [showTooltip]);
 
   if (width < 10 || height < 10) return null;
 
-  return (
-    <svg width={width} height={height}>
-      <GridColumns scale={xScale} width={width} height={height - margin.bottom} stroke="#f0f0f0" />
-      <Group top={margin.top}>
-        <AnimatePresence>
-          {/* Past Logs */}
-          {timeline.past?.map((log: Log, i: number) => {
-            const s = new Date(log.timeStarted);
-            const f = new Date(log.timeFinished);
-            if (isNaN(s.getTime()) || isNaN(f.getTime())) return null;
-            
-            return (
-              <motion.rect
-                key={`log-${log.id}`}
-                initial={{ opacity: 0 }}
-                animate={{ 
-                  opacity: 0.8,
-                  x: xScale(s),
-                  width: Math.max(5, xScale(f) - xScale(s))
-                }}
-                y={i * 25 % Math.max(1, height - margin.bottom - margin.top - 20)}
-                height={20}
-                fill={log.succeeded ? '#48BB78' : '#F56565'}
-                rx={4}
-                transition={{ duration: 0.5 }}
-              />
-            );
-          })}
-          {/* Future Tasks */}
-          {timeline.future?.map((task: Task, i: number) => {
-            const execTime = Array.isArray(task.executionTime) ? task.executionTime[0] : task.executionTime;
-            if (!execTime) return null;
-            const d = new Date(execTime);
-            if (isNaN(d.getTime())) return null;
+  const rowHeight = 25;
+  const chartAreaHeight = height - margin.top - margin.bottom;
+  const maxRows = Math.floor(chartAreaHeight / rowHeight);
 
-            return (
-              <motion.rect
-                key={`task-${task.taskName}-${i}`}
-                initial={{ opacity: 0 }}
-                animate={{ 
-                  opacity: 0.6,
-                  x: xScale(d)
-                }}
-                y={(i * 25 + 200) % Math.max(1, height - margin.bottom - margin.top - 20)}
-                width={12}
-                height={20}
-                fill="#4299E1"
-                rx={4}
-                transition={{ duration: 0.5 }}
-              />
-            );
+  return (
+    <Box position="relative" w="full" h="full">
+      <svg width={width} height={height}>
+        <GridColumns scale={xScale} width={width} height={chartAreaHeight} stroke="#f0f0f0" top={margin.top} />
+        <Group top={margin.top}>
+          <AnimatePresence>
+            {/* Past Logs */}
+            {timeline.past?.map((log: Log, i: number) => {
+              const s = new Date(log.timeStarted);
+              const f = new Date(log.timeFinished);
+              if (isNaN(s.getTime()) || isNaN(f.getTime())) return null;
+              
+              const xPos = xScale(s);
+              const w = Math.max(8, xScale(f) - xPos);
+              const yPos = (i % maxRows) * rowHeight;
+
+              return (
+                <motion.rect
+                  key={`log-${log.id}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.8, x: xPos, width: w }}
+                  y={yPos}
+                  height={20}
+                  fill={log.succeeded ? '#48BB78' : '#F56565'}
+                  rx={4}
+                  onMouseEnter={(e) => handleHover(e, {
+                    name: log.taskName,
+                    id: log.taskInstance,
+                    status: log.succeeded ? 'succeeded' : 'failed',
+                    time: `${s.toLocaleTimeString()} - ${f.toLocaleTimeString()}`
+                  }, xPos + w/2, yPos + margin.top)}
+                  onMouseLeave={hideTooltip}
+                />
+              );
+            })}
+            
+            {/* Current & Future Tasks */}
+            {timeline.future?.map((task: Task, i: number) => {
+              const execTime = Array.isArray(task.executionTime) ? task.executionTime[0] : task.executionTime;
+              if (!execTime) return null;
+              const d = new Date(execTime);
+              if (isNaN(d.getTime())) return null;
+
+              const isRunning = Array.isArray(task.picked) ? task.picked[0] : task.picked;
+              const xPos = xScale(isRunning ? now : d);
+              const yPos = ((i + (timeline.past?.length || 0)) % maxRows) * rowHeight;
+
+              return (
+                <motion.rect
+                  key={`task-${task.taskName}-${Array.isArray(task.taskInstance) ? task.taskInstance[0] : task.taskInstance || i}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ 
+                    opacity: isRunning ? 0.9 : 0.6,
+                    x: isRunning ? xPos - 15 : xPos,
+                    width: isRunning ? 30 : 12
+                  }}
+                  y={yPos}
+                  height={20}
+                  fill={isRunning ? '#ED8936' : '#4299E1'}
+                  rx={4}
+                  onMouseEnter={(e) => handleHover(e, {
+                    name: task.taskName,
+                    id: Array.isArray(task.taskInstance) ? task.taskInstance[0] : task.taskInstance,
+                    status: isRunning ? 'running' : 'scheduled',
+                    time: d.toLocaleTimeString()
+                  }, xPos, yPos + margin.top)}
+                  onMouseLeave={hideTooltip}
+                />
+              );
+            })}
+          </AnimatePresence>
+          
+          {/* "Now" Line */}
+          <motion.line
+            animate={{ x1: xScale(now), x2: xScale(now) }}
+            y1={0}
+            y2={chartAreaHeight}
+            stroke="#E53E3E"
+            strokeWidth={2}
+            strokeDasharray="5 3"
+          />
+        </Group>
+        <AxisBottom
+          top={height - margin.bottom}
+          scale={xScale}
+          numTicks={width > 500 ? 10 : 5}
+          stroke="#718096"
+          tickStroke="#718096"
+          tickLabelProps={() => ({
+            fill: '#4A5568',
+            fontSize: 11,
+            textAnchor: 'middle',
           })}
-        </AnimatePresence>
-        
-        {/* "Now" Line */}
-        <motion.line
-          animate={{ x1: xScale(now), x2: xScale(now) }}
-          y1={-margin.top}
-          y2={height - margin.bottom}
-          stroke="#E53E3E"
-          strokeWidth={3}
-          strokeDasharray="5 3"
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
         />
-        <motion.text
-          animate={{ x: xScale(now) + 5 }}
-          y={-10}
-          fontSize="xs"
-          fontWeight="bold"
-          fill="#E53E3E"
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      </svg>
+      
+      {tooltipData && (
+        <TooltipWithBounds
+          top={tooltipTop}
+          left={tooltipLeft}
+          style={{
+            ...defaultStyles,
+            backgroundColor: '#2D3748',
+            color: 'white',
+            padding: '8px 12px',
+            borderRadius: '8px',
+            fontSize: '12px',
+            zIndex: 1000,
+          }}
         >
-          NOW
-        </motion.text>
-      </Group>
-      <AxisBottom
-        top={height - margin.bottom}
-        scale={xScale}
-        numTicks={width > 500 ? 10 : 5}
-        stroke="#718096"
-        tickStroke="#718096"
-        tickLabelProps={() => ({
-          fill: '#4A5568',
-          fontSize: 11,
-          textAnchor: 'middle',
-        })}
-      />
-    </svg>
+          <VStack align="start" spacing={0}>
+            <Text fontWeight="bold">{tooltipData.name}</Text>
+            <Text fontSize="xs" opacity={0.8}>ID: {tooltipData.id}</Text>
+            <Text fontSize="xs" color={
+              tooltipData.status === 'succeeded' ? 'green.300' : 
+              tooltipData.status === 'failed' ? 'red.300' : 
+              tooltipData.status === 'running' ? 'orange.300' : 'blue.300'
+            }>
+              {tooltipData.status.toUpperCase()}
+            </Text>
+            <Text fontSize="xs">{tooltipData.time}</Text>
+          </VStack>
+        </TooltipWithBounds>
+      )}
+    </Box>
   );
 };
 
@@ -154,8 +221,8 @@ export const TimelinePage: React.FC = () => {
     endOffset: 1000 * 60 * 30,    // 30m future
   });
 
-  const start = useMemo(() => new Date(stabilizedNow.getTime() + viewWindow.startOffset), [stabilizedNow, viewWindow.startOffset]);
-  const end = useMemo(() => new Date(stabilizedNow.getTime() + viewWindow.endOffset), [stabilizedNow, viewWindow.endOffset]);
+  const start = useMemo(() => new Date(stabilizedNow.getTime() + viewWindow.startOffset), [stabilizedNow]);
+  const end = useMemo(() => new Date(stabilizedNow.getTime() + viewWindow.endOffset), [stabilizedNow]);
 
   const { data: timeline } = useQuery(
     [TIMELINE_QUERY_KEY, start.toISOString(), end.toISOString()],

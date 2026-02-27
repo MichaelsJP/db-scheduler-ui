@@ -52,7 +52,7 @@ public class TimelineLogic {
         start, end,
         true, null);
 
-    GetTasksResponse tasksResponse = taskLogic.getAllTasks(taskParams);
+    GetTasksResponse tasksResponse = taskLogic.getAllTasksUngrouped(taskParams);
 
     return new TimelineModel(logsResponse.getItems(), tasksResponse.getItems());
   }
