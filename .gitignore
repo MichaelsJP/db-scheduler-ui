@@ -39,6 +39,9 @@ replay_pid*
 /db-scheduler-ui/src/main/resources/templates/index.html
 /db-scheduler-ui/src/main/resources/templates/db-scheduler-ui/index.html
 
+# Local frontend node install (created by frontend-maven-plugin)
+/db-scheduler-ui-frontend/node/
+
 ### STS ###
 .apt_generated
 .classpath
