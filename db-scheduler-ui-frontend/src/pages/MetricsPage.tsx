@@ -177,6 +177,7 @@ export const MetricsPage: React.FC = () => {
   const [timeWindow, setTimeWindow] = useState(60); // minutes
   const [refreshInterval, setRefreshInterval] = useState(10); // seconds
   const [countdown, setCountdown] = useState(refreshInterval);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [now, setNow] = useState(new Date());
   const queryClient = useQueryClient();
   
@@ -185,12 +186,17 @@ export const MetricsPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleManualRefresh = useCallback(() => {
-    queryClient.invalidateQueries([METRICS_QUERY_KEY]);
-    queryClient.invalidateQueries([TIMELINE_QUERY_KEY]);
+  const handleManualRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await Promise.all([
+      queryClient.invalidateQueries([METRICS_QUERY_KEY]),
+      queryClient.invalidateQueries([TIMELINE_QUERY_KEY])
+    ]);
     if (refreshInterval !== 0) {
       setCountdown(refreshInterval);
     }
+    // Artificial delay for the spin effect
+    setTimeout(() => setIsRefreshing(false), 800);
   }, [queryClient, refreshInterval]);
 
   useEffect(() => {
@@ -218,11 +224,12 @@ export const MetricsPage: React.FC = () => {
     return new Date(Math.floor(time / 10000) * 10000);
   }, [now]);
 
-  const start = useMemo(() => new Date(stabilizedNow.getTime() - 1000 * 60 * 30), [stabilizedNow]);
-  const end = useMemo(() => new Date(stabilizedNow.getTime() + 1000 * 60 * 30), [stabilizedNow]);
+  // Adjust start/end based on timeWindow (half of window before, half after 'now' for perspective)
+  const start = useMemo(() => new Date(stabilizedNow.getTime() - 1000 * 60 * (timeWindow / 2)), [stabilizedNow, timeWindow]);
+  const end = useMemo(() => new Date(stabilizedNow.getTime() + 1000 * 60 * (timeWindow / 2)), [stabilizedNow, timeWindow]);
 
   const { data: metrics, isLoading: metricsLoading } = useQuery([METRICS_QUERY_KEY, timeWindow], () => getMetrics(timeWindow), {
-    refetchInterval: false, // Handled by our countdown useEffect
+    refetchInterval: false,
     keepPreviousData: true,
   });
 
@@ -277,36 +284,27 @@ export const MetricsPage: React.FC = () => {
               <option value={30}>30s</option>
               <option value={60}>1m</option>
             </Select>
-            <Box position="relative">
-              <IconButton
-                aria-label="Refresh manually"
-                icon={<RepeatIcon />}
-                size="sm"
-                onClick={handleManualRefresh}
-                variant="outline"
-                bg="white"
-              />
-              {refreshInterval > 0 && (
-                <Text 
-                  position="absolute" 
-                  top="-2" 
-                  right="-2" 
-                  bg="blue.500" 
-                  color="white" 
-                  fontSize="xs" 
-                  borderRadius="full" 
-                  w="18px" 
-                  h="18px" 
-                  display="flex" 
-                  alignItems="center" 
-                  justifyContent="center"
-                  fontWeight="bold"
-                  pointerEvents="none"
-                >
-                  {countdown}
-                </Text>
-              )}
-            </Box>
+            <IconButton
+              aria-label="Refresh manually"
+              icon={isRefreshing ? <RepeatIcon /> : <Text fontSize="xs" fontWeight="bold">{refreshInterval > 0 ? countdown : ""}</Text>}
+              size="sm"
+              onClick={handleManualRefresh}
+              variant="outline"
+              bg="white"
+              isDisabled={isRefreshing}
+              className={isRefreshing ? "spin-animation" : ""}
+              _hover={{ bg: "gray.50" }}
+              w="36px"
+            />
+            <style>{`
+              @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+              }
+              .spin-animation svg {
+                animation: spin 0.8s linear infinite;
+              }
+            `}</style>
           </HStack>
         </HStack>
       </HStack>
