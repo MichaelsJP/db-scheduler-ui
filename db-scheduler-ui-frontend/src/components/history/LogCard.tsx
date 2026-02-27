@@ -19,9 +19,10 @@ import colors from 'src/styles/colors';
 
 interface LogCardProps {
   log: Log;
+  onTagClick?: (tag: string) => void;
 }
 
-export const LogCard: React.FC<LogCardProps> = ({ log }) => (
+export const LogCard: React.FC<LogCardProps> = ({ log, onTagClick }) => (
   <AccordionItem
     backgroundColor={colors.primary['100']}
     borderRadius={4}
@@ -39,6 +40,7 @@ export const LogCard: React.FC<LogCardProps> = ({ log }) => (
       exceptionMessage={log.exceptionMessage}
       timeFinished={log.timeFinished}
       tags={log.tags}
+      onTagClick={onTagClick}
     />
     <Divider color={colors.primary['300']} />
     <LogAccordionItem

@@ -337,4 +337,13 @@ public class LogLogic {
               )
       );
   }
+
+  public List<String> getTags() {
+    if ("PostgreSQL".equalsIgnoreCase(databaseProductName)) {
+      return namedParameterJdbcTemplate.query(
+          "SELECT DISTINCT unnest(tags) FROM " + logTableName,
+          (rs, rowNum) -> rs.getString(1));
+    }
+    return java.util.Collections.emptyList();
+  }
 }

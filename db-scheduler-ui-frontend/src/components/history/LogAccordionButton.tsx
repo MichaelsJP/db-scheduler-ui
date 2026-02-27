@@ -15,10 +15,11 @@ import { AccordionButton, AccordionIcon, Box, HStack } from '@chakra-ui/react';
 import { LogStatus } from 'src/components/history/LogStatus';
 import { dateFormatText } from 'src/utils/dateFormatText';
 import React from 'react';
-import { useParams } from 'react-router-dom';
 import { AttachmentIcon } from '@chakra-ui/icons';
 
 import { TagBadge } from 'src/components/common/TagBadge';
+
+import { useParams } from 'react-router-dom';
 
 interface LogAccordionButtonProps {
   succeeded: boolean;
@@ -30,12 +31,14 @@ interface LogAccordionButtonProps {
   exceptionMessage: string | null;
   timeFinished: Date;
   tags?: string[];
+  onTagClick?: (tag: string) => void;
 }
 
 export const LogAccordionButton: React.FC<LogAccordionButtonProps> = (
   props,
 ) => {
-  const { taskName } = useParams();
+  const { taskName } = useParams<{ taskName?: string }>();
+  const { onTagClick } = props;
   return (
     <h2>
       <AccordionButton
@@ -63,7 +66,7 @@ export const LogAccordionButton: React.FC<LogAccordionButtonProps> = (
           <Box flex="2" textAlign="left">
             <HStack wrap="wrap" spacing={1}>
               {props.tags && props.tags.map(tag => (
-                <TagBadge key={tag} tag={tag} />
+                <TagBadge key={tag} tag={tag} onClick={onTagClick} />
               ))}
             </HStack>
           </Box>

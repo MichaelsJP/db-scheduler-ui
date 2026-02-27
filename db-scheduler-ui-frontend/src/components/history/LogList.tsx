@@ -52,6 +52,8 @@ export const LogList: React.FC = () => {
     taskNameExactMatch,
     setTaskNameExactMatch,
     setTaskInstanceExactMatch,
+    selectedTags,
+    setSelectedTags,
   } = useInfiniteScrolling<LogResponse>(
     taskName
       ? {
@@ -79,6 +81,14 @@ export const LogList: React.FC = () => {
     setTaskNameExactMatch,
   ]);
 
+  const handleTagClick = (tag: string) => {
+    if (selectedTags.includes(tag)) {
+      setSelectedTags(selectedTags.filter((t) => t !== tag));
+    } else {
+      setSelectedTags([...selectedTags, tag]);
+    }
+  };
+
   return (
     <Box>
       <HeaderBar
@@ -104,6 +114,8 @@ export const LogList: React.FC = () => {
         taskNameExactMatch={taskNameExactMatch}
         taskInstanceExactMatch={taskInstanceExactMatch}
         history
+        selectedTags={selectedTags}
+        setSelectedTags={setSelectedTags}
       />
       <Box mb={7}>
         <Flex alignItems={'center'}>
@@ -147,7 +159,7 @@ export const LogList: React.FC = () => {
       <Accordion allowMultiple>
         {data?.pages.map((p) =>
           p.items.map((log) => (
-            <LogCard key={log.id + log.taskName + log.taskInstance} log={log} />
+            <LogCard key={log.id + log.taskName + log.taskInstance} log={log} onTagClick={handleTagClick} />
           )),
         )}
       </Accordion>

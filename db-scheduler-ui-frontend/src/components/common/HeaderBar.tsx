@@ -35,6 +35,7 @@ import colors from 'src/styles/colors';
 import { RunAllAlert } from 'src/components/scheduled/RunAllAlert';
 import { TaskDetailsRequestParams } from 'src/models/TaskRequestParams';
 import { useParams } from 'react-router-dom';
+import { TagFilter } from 'src/components/tags/TagFilter';
 
 interface HeaderBarProps {
   params: TaskDetailsRequestParams;
@@ -50,6 +51,8 @@ interface HeaderBarProps {
   setTaskInstanceExactMatch: (exactMatch: boolean) => void;
   taskNameExactMatch: boolean;
   taskInstanceExactMatch: boolean;
+  selectedTags: string[];
+  setSelectedTags: (tags: string[]) => void;
 }
 
 export const HeaderBar: React.FC<HeaderBarProps> = ({
@@ -64,6 +67,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   taskNameExactMatch,
   taskInstanceExactMatch,
   params,
+  selectedTags,
+  setSelectedTags,
 }) => {
   const { taskName: urlTaskName } = useParams<{ taskName?: string }>();
   const isDetailsView = !!urlTaskName;
@@ -184,6 +189,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               </Checkbox>
             </VStack>
           </HStack>
+          <TagFilter selectedTags={selectedTags} setSelectedTags={setSelectedTags} />
         </Box>
       </Box>
       <Box alignSelf={'start'}>

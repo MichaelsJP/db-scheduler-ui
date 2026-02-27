@@ -24,10 +24,11 @@ import colors from 'src/styles/colors';
 interface TaskCardProps extends Task {
   refetch: () => void;
   accordionProps?: AccordionItemProps;
+  onTagClick?: (tag: string) => void;
 }
 
 const TaskCard: React.FC<TaskCardProps> = (props) => {
-  const { accordionProps, lastSuccess, lastFailure, taskData } = props;
+  const { accordionProps, lastSuccess, lastFailure, taskData, onTagClick } = props;
 
   return (
     <AccordionItem
@@ -39,7 +40,7 @@ const TaskCard: React.FC<TaskCardProps> = (props) => {
       {...accordionProps}
       pos={'relative'}
     >
-      <TaskAccordionButton {...props} />
+      <TaskAccordionButton {...props} onTagClick={onTagClick} />
       {!isStatus('Group', props) && (
         <>
           <Divider color={colors.primary['300']} />

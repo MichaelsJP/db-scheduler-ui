@@ -17,9 +17,10 @@ import React from 'react';
 interface TagBadgeProps {
   tag: string;
   onClick?: (tag: string) => void;
+  isSelected?: boolean;
 }
 
-export const TagBadge: React.FC<TagBadgeProps> = ({ tag, onClick }) => {
+export const TagBadge: React.FC<TagBadgeProps> = ({ tag, onClick, isSelected }) => {
   const getColor = (t: string) => {
     const colors = ['blue', 'green', 'purple', 'orange', 'pink', 'teal'];
     const index = t.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -27,10 +28,10 @@ export const TagBadge: React.FC<TagBadgeProps> = ({ tag, onClick }) => {
   };
 
   return (
-    <Tooltip label={`Filter by ${tag}`}>
+    <Tooltip label={`${isSelected ? 'Remove' : 'Add'} ${tag} filter`}>
       <Badge
         colorScheme={getColor(tag)}
-        variant="subtle"
+        variant={isSelected ? 'solid' : 'subtle'}
         px={2}
         py={0.5}
         borderRadius="full"
@@ -38,6 +39,8 @@ export const TagBadge: React.FC<TagBadgeProps> = ({ tag, onClick }) => {
         onClick={() => onClick && onClick(tag)}
         textTransform="none"
         fontSize="xs"
+        border={isSelected ? '1px solid' : 'none'}
+        borderColor={isSelected ? 'whiteAlpha.500' : 'transparent'}
       >
         {tag}
       </Badge>

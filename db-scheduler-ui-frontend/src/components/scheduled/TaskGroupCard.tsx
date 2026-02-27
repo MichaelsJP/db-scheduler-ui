@@ -18,9 +18,11 @@ import { Box } from '@chakra-ui/react';
 
 interface TaskCardProps extends Task {
   refetch: () => void;
+  onTagClick?: (tag: string) => void;
 }
 
 const TaskGroupCard: React.FC<TaskCardProps> = (taskProps) => {
+  const { onTagClick } = taskProps;
   const [marginBottom, setMarginBottom] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -44,6 +46,7 @@ const TaskGroupCard: React.FC<TaskCardProps> = (taskProps) => {
       <Box zIndex={0} mr={2} pos={'relative'}>
         <TaskCard
           {...taskProps}
+          onTagClick={onTagClick}
           accordionProps={{
             shadow: 'md',
           }}
@@ -58,6 +61,7 @@ const TaskGroupCard: React.FC<TaskCardProps> = (taskProps) => {
       >
         <TaskCard
           {...taskProps}
+          onTagClick={onTagClick}
           accordionProps={{
             shadow: 'md',
             mt: -1,
@@ -74,6 +78,7 @@ const TaskGroupCard: React.FC<TaskCardProps> = (taskProps) => {
       >
         <TaskCard
           {...taskProps}
+          onTagClick={onTagClick}
           accordionProps={{
             shadow: 'md',
             mt: -1,

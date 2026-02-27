@@ -18,6 +18,7 @@ import {
   Flex,
   HStack,
   Text,
+  VStack,
 } from '@chakra-ui/react';
 import { StatusBox } from 'src/components/common/StatusBox';
 import { TaskRunButton } from 'src/components/input/TaskRunButton';
@@ -36,6 +37,7 @@ import { TagBadge } from 'src/components/common/TagBadge';
 
 interface TaskAccordionButtonProps extends Task {
   refetch: () => void;
+  onTagClick?: (tag: string) => void;
 }
 
 export const TaskAccordionButton: React.FC<TaskAccordionButtonProps> = (
@@ -49,6 +51,7 @@ export const TaskAccordionButton: React.FC<TaskAccordionButtonProps> = (
     taskData,
     tags,
     refetch,
+    onTagClick,
   } = props;
   const { taskName: isDetailsView } = useParams<{ taskName?: string }>();
   const navigate = useNavigate();
@@ -94,7 +97,9 @@ export const TaskAccordionButton: React.FC<TaskAccordionButtonProps> = (
               alignItems={'center'}
               overflow={'hidden'}
             >
-              <Text>{taskName}</Text>
+              <VStack align="start" spacing={0}>
+                <Text>{taskName}</Text>
+              </VStack>
               {isStatus('Group', props) && (
                 <Box ml={2}>
                   <NumberCircleGroup {...props} />
@@ -118,7 +123,7 @@ export const TaskAccordionButton: React.FC<TaskAccordionButtonProps> = (
           <Box flex="2" textAlign="left">
             <HStack wrap="wrap" spacing={1}>
               {tags && tags.map(tag => (
-                <TagBadge key={tag} tag={tag} />
+                <TagBadge key={tag} tag={tag} onClick={onTagClick} />
               ))}
             </HStack>
           </Box>

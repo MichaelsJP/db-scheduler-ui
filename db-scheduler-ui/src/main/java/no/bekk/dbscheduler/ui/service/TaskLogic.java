@@ -100,6 +100,10 @@ public class TaskLogic {
     scheduler.updateTags(TaskInstanceId.of(taskName, taskId), tags);
   }
 
+  public List<String> getTags() {
+    return scheduler.getTags();
+  }
+
   public GetTasksResponse getAllTasks(TaskRequestParams params) {
     List<ScheduledExecution<Object>> executions =
         caching.getExecutionsFromCacheOrDB(params.isRefresh(), scheduler);

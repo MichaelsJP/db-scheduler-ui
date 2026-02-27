@@ -155,8 +155,12 @@ public class UiApiAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  ConfigController configController(DbSchedulerUiProperties properties) {
-    return new ConfigController(properties.isHistory(), properties::isReadOnly);
+  ConfigController configController(
+      DbSchedulerUiProperties properties,
+      TaskLogic taskLogic,
+      org.springframework.beans.factory.ObjectProvider<LogLogic> logLogicProvider) {
+    return new ConfigController(
+        properties.isHistory(), properties::isReadOnly, taskLogic, logLogicProvider.getIfAvailable());
   }
 
   @Bean

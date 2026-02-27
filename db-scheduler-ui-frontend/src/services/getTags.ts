@@ -11,19 +11,16 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { API_BASE_URL } from 'src/utils/config';
 
-export const API_BASE_URL: string =
-    (import.meta.env.VITE_API_BASE_URL as string) ??
-    window.location.origin + (window.CONTEXT_PATH || '') + '/db-scheduler-api';
+export const ALL_TAGS_QUERY_KEY = 'tags/all';
 
-const config = await fetch(`${API_BASE_URL}/config`).then((res) =>
-  res.json(),
-);
+export const getTags = async (): Promise<string[]> => {
+  const response = await fetch(`${API_BASE_URL}/config/tags`);
 
-const showHistory =
-  'showHistory' in config ? Boolean(config.showHistory) : false;
+  if (!response.ok) {
+    throw new Error('Error fetching tags');
+  }
 
-const readOnly = 'readOnly' in config ? Boolean(config.readOnly) : false;
-
-export const getShowHistory = (): boolean => showHistory;
-export const getReadonly = (): boolean => readOnly;
+  return await response.json();
+};

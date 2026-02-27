@@ -25,11 +25,7 @@ import colors from 'src/styles/colors';
 import { HeaderBar } from 'src/components/common/HeaderBar';
 import { TasksResponse } from 'src/models/TasksResponse';
 
-interface TaskListProps {
-  filterTags?: string[];
-}
-
-const TaskList: React.FC<TaskListProps> = ({ filterTags }) => {
+const TaskList: React.FC = () => {
   const { taskName } = useParams<{ taskName?: string }>();
   const isDetailsView = !!taskName;
 
@@ -53,20 +49,28 @@ const TaskList: React.FC<TaskListProps> = ({ filterTags }) => {
     taskNameExactMatch,
     setTaskNameExactMatch,
     setTaskInstanceExactMatch,
+    selectedTags,
+    setSelectedTags,
   } = useInfiniteScrolling<TasksResponse>(
     isDetailsView
       ? {
           fetchDataFunction: getTask,
           taskName: taskName,
           baseQueryKey: TASK_DETAILS_QUERY_KEY,
-          tags: filterTags,
         }
       : { 
           fetchDataFunction: getTasks, 
           baseQueryKey: TASK_QUERY_KEY,
-          tags: filterTags,
         },
   );
+
+  const handleTagClick = (tag: string) => {
+    if (selectedTags.includes(tag)) {
+      setSelectedTags(selectedTags.filter((t) => t !== tag));
+    } else {
+      setSelectedTags([...selectedTags, tag]);
+    }
+  };
 
   return (
     <Box>
@@ -89,6 +93,8 @@ const TaskList: React.FC<TaskListProps> = ({ filterTags }) => {
         taskNameExactMatch={taskNameExactMatch}
         taskInstanceExactMatch={taskInstanceExactMatch}
         refetch={refetch}
+        selectedTags={selectedTags}
+        setSelectedTags={setSelectedTags}
       />
 
       <TitleRow
@@ -106,9 +112,15 @@ const TaskList: React.FC<TaskListProps> = ({ filterTags }) => {
                 key={task.taskInstance + task.taskName}
                 {...task}
                 refetch={refetch}
+                onTagClick={handleTagClick}
               />
             ) : (
-              <TaskGroupCard key={task.taskName} {...task} refetch={refetch} />
+              <TaskGroupCard 
+                key={task.taskName} 
+                {...task} 
+                refetch={refetch} 
+                onTagClick={handleTagClick}
+              />
             ),
           ),
         )}
