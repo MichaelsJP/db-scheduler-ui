@@ -70,7 +70,7 @@
     </distributionManagement>
 
     <properties>
-        <maven.compiler.release>17</maven.compiler.release>
+        <maven.compiler.release>21</maven.compiler.release>
         <spring-boot.version>3.4.7</spring-boot.version>
         <lombok.version>1.18.38</lombok.version>
         <db-scheduler.version>main-SNAPSHOT</db-scheduler.version>
