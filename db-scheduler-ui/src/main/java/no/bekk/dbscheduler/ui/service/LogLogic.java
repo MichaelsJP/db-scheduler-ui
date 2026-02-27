@@ -260,7 +260,7 @@ public class LogLogic {
     @Override
     public String getQueryPart() {
       if ("PostgreSQL".equalsIgnoreCase(databaseProductName)) {
-        return "tags && :tags::text[]";
+        return "tags && CAST(:tags AS text[])";
       }
       // If not PostgreSQL, we assume tags might be stored as VARCHAR/TEXT if they exist at all
       return "1=1"; 

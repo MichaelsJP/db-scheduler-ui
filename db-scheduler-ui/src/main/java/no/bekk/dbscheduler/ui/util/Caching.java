@@ -79,8 +79,11 @@ public class Caching {
   public List<LogModel> getLogsFromCacheOrDB(
       boolean isRefresh, LogLogic logLogic, TaskDetailsRequestParams requestParams) {
     boolean hasTags = requestParams.getTags() != null && !requestParams.getTags().isEmpty();
+    
+    // Always bypass cache if we have tags to ensure filtering is correct
     if (isRefresh || logCache.isEmpty() || hasTags) {
       List<LogModel> logs = logLogic.getLogsDirectlyFromDB(requestParams);
+      // ONLY update the global cache if we fetched EVERYTHING (no tags)
       if (!hasTags) {
         updateLogCache(logs);
       }
