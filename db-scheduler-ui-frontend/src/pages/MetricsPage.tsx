@@ -37,6 +37,8 @@ import { bisector } from 'd3-array';
 import { MetricDataPoint } from 'src/models/Metrics';
 import colors from 'src/styles/colors';
 import { RefreshButton } from 'src/components/input/RefreshButton';
+import { TaskStream } from './TaskStream';
+import { useRefresh } from 'src/context/RefreshContext';
 
 const bisectDate = bisector<MetricDataPoint, Date>(d => new Date(d.timestamp)).left;
 
@@ -50,11 +52,12 @@ const Sparkline = ({ data, width, height, color, minX, maxX }: { data: MetricDat
   } = useTooltip<MetricDataPoint>();
 
   const values = useMemo(() => data?.map(d => d.value) || [], [data]);
+  const dataMaxX = useMemo(() => Math.max(...(data?.map(d => new Date(d.timestamp).getTime()) || []), maxX), [data, maxX]);
 
   const xScale = useMemo(() => scaleTime({
-    domain: [minX, maxX],
+    domain: [minX, dataMaxX],
     range: [0, width],
-  }), [minX, maxX, width]);
+  }), [minX, dataMaxX, width]);
 
   const yScale = useMemo(() => scaleLinear({
     domain: [0, Math.max(...values) * 1.1 || 1],
@@ -88,7 +91,7 @@ const Sparkline = ({ data, width, height, color, minX, maxX }: { data: MetricDat
 
   return (
     <Box position="relative">
-      <svg width={width} height={height} style={{ overflow: 'visible' }}>
+      <svg width={width} height={height} style={{ overflow: 'hidden' }}>
         <LinePath
           data={data}
           x={d => xScale(new Date(d.timestamp)) ?? 0}
@@ -123,7 +126,7 @@ const Sparkline = ({ data, width, height, color, minX, maxX }: { data: MetricDat
       {tooltipData && (
         <TooltipWithBounds
           key={Math.random()}
-          top={tooltipTop}
+          top={tooltipTop - 10}
           left={tooltipLeft}
           style={{
             ...defaultStyles,
@@ -136,7 +139,8 @@ const Sparkline = ({ data, width, height, color, minX, maxX }: { data: MetricDat
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
             zIndex: 100,
             border: '2px solid white',
-            transform: 'translate(-50%, -130%)',
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap',
           }}
         >
           {tooltipData.value % 1 === 0 ? tooltipData.value : tooltipData.value.toFixed(2)}
@@ -155,17 +159,24 @@ const MetricCard = ({ label, value, helpText, history, color, minX, maxX }: { la
     borderRadius="xl"
     bg="white"
     position="relative"
-    overflow="visible"
+    overflow="hidden"
     minH="150px"
   >
     <StatLabel fontWeight="bold" color="gray.600" zIndex={2} position="relative" pointerEvents="none">{label}</StatLabel>
     <StatNumber fontSize="3xl" color={colors.dbBlue} zIndex={2} position="relative" pointerEvents="none">{value}</StatNumber>
     <StatHelpText zIndex={2} position="relative" pointerEvents="none">{helpText}</StatHelpText>
     {history && minX !== undefined && maxX !== undefined && (
-      <Box position="absolute" bottom={0} left={0} right={0} height="80px" zIndex={1}>
+      <Box position="absolute" bottom={0} left={-1} right={-1} height="80px" zIndex={1}>
         <ParentSize>
           {({ width, height }) => (
-            <Sparkline data={history} width={width} height={height} color={color} minX={minX} maxX={maxX} />
+            <Sparkline 
+              data={history} 
+              width={width + 2} // Compensation for negative margins
+              height={height} 
+              color={color} 
+              minX={minX} 
+              maxX={maxX} 
+            />
           )}
         </ParentSize>
       </Box>
@@ -175,32 +186,22 @@ const MetricCard = ({ label, value, helpText, history, color, minX, maxX }: { la
 
 export const MetricsPage: React.FC = () => {
   const [timeWindow, setTimeWindow] = useState(10); // minutes
-  const [now, setNow] = useState(new Date());
+  const { lastRefresh } = useRefresh();
   const queryClient = useQueryClient();
   
-  useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(interval);
-  }, []);
-
   // Synchronize with global refresh events
   useEffect(() => {
     const handleGlobalRefresh = () => {
       queryClient.invalidateQueries([METRICS_QUERY_KEY]);
     };
-
     window.addEventListener('db-scheduler-ui-refresh', handleGlobalRefresh);
     return () => window.removeEventListener('db-scheduler-ui-refresh', handleGlobalRefresh);
   }, [queryClient]);
 
-  const stabilizedNow = useMemo(() => {
-    const time = now.getTime();
-    return new Date(Math.floor(time / 10000) * 10000);
-  }, [now]);
-
   // Domain for metrics sparklines (always last durationMinutes)
-  const metricsMinX = useMemo(() => stabilizedNow.getTime() - 1000 * 60 * timeWindow, [stabilizedNow, timeWindow]);
-  const metricsMaxX = useMemo(() => stabilizedNow.getTime(), [stabilizedNow]);
+  const metricsMinX = useMemo(() => lastRefresh - 1000 * 60 * timeWindow, [lastRefresh, timeWindow]);
+  const metricsMaxX = useMemo(() => lastRefresh, [lastRefresh]);
+
 
   const { data: metrics, isLoading: metricsLoading } = useQuery([METRICS_QUERY_KEY, timeWindow], () => getMetrics(timeWindow), {
     refetchInterval: false,
@@ -285,6 +286,19 @@ export const MetricsPage: React.FC = () => {
           />
         </SimpleGrid>
       )}
+
+      <Box pt={4}>
+        <Heading size="md" mb={4}>Task Stream</Heading>
+        {metrics ? (
+          <TaskStream 
+            logs={metrics.recentLogs || []} 
+            tasks={metrics.scheduledTasks || []} 
+            anchorTime={lastRefresh}
+          />
+        ) : (
+          <Box p={10} bg="white" shadow="md" borderRadius="xl">Loading stream...</Box>
+        )}
+      </Box>
     </VStack>
   );
 };

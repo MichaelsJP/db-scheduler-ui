@@ -26,10 +26,12 @@ import javax.sql.DataSource;
 import no.bekk.dbscheduler.ui.controller.ConfigController;
 import no.bekk.dbscheduler.ui.controller.IndexHtmlController;
 import no.bekk.dbscheduler.ui.controller.LogController;
+import no.bekk.dbscheduler.ui.controller.MetricsController;
 import no.bekk.dbscheduler.ui.controller.SpaFallbackMvc;
 import no.bekk.dbscheduler.ui.controller.TaskAdminController;
 import no.bekk.dbscheduler.ui.controller.TaskController;
 import no.bekk.dbscheduler.ui.service.LogLogic;
+import no.bekk.dbscheduler.ui.service.MetricsLogic;
 import no.bekk.dbscheduler.ui.service.TaskLogic;
 import no.bekk.dbscheduler.ui.util.Caching;
 import no.bekk.dbscheduler.uistarter.config.DbSchedulerUiProperties;
@@ -124,6 +126,25 @@ public class UiApiAutoConfiguration {
   @ConditionalOnMissingBean
   TaskController taskController(TaskLogic taskLogic) {
     return new TaskController(taskLogic);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  MetricsLogic metricsLogic(
+      Scheduler scheduler,
+      DataSource dataSource,
+      DbSchedulerCustomizer customizer,
+      Caching caching,
+      LogLogic logLogic,
+      @Value("${db-scheduler-log.table-name:scheduled_execution_logs}") String logTableName) {
+    return new MetricsLogic(
+        scheduler, customizer.dataSource().orElse(dataSource), logTableName, caching, logLogic);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  MetricsController metricsController(MetricsLogic metricsLogic) {
+    return new MetricsController(metricsLogic);
   }
 
   @Bean

@@ -35,6 +35,8 @@ public class MetricsModel {
   private List<MetricDataPoint> failureHistory;
   private List<MetricDataPoint> workerSaturationHistory;
   private List<MetricDataPoint> queueBackpressureHistory;
+  private List<LogModel> recentLogs;
+  private List<TaskModel> scheduledTasks;
 
   @Getter
   @Setter

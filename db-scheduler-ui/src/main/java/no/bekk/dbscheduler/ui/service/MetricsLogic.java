@@ -21,18 +21,27 @@ import java.util.List;
 import javax.sql.DataSource;
 import no.bekk.dbscheduler.ui.model.MetricsModel;
 import no.bekk.dbscheduler.ui.model.MetricsModel.MetricDataPoint;
+import no.bekk.dbscheduler.ui.model.TaskModel;
+import no.bekk.dbscheduler.ui.model.LogModel;
+import no.bekk.dbscheduler.ui.util.Caching;
+import no.bekk.dbscheduler.ui.util.QueryUtils;
+import no.bekk.dbscheduler.ui.util.mapper.TaskMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 public class MetricsLogic {
 
   private final Scheduler scheduler;
+  private final Caching caching;
+  private final LogLogic logLogic;
   private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
   private final String logTableName;
   private final String databaseProductName;
 
-  public MetricsLogic(Scheduler scheduler, DataSource dataSource, String logTableName) {
+  public MetricsLogic(Scheduler scheduler, DataSource dataSource, String logTableName, Caching caching, LogLogic logLogic) {
     this.scheduler = scheduler;
+    this.caching = caching;
+    this.logLogic = logLogic;
     this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
     this.logTableName = logTableName;
     try (java.sql.Connection connection = dataSource.getConnection()) {
@@ -58,10 +67,10 @@ public class MetricsLogic {
     
     double throughput = completedInWindow != null ? (double) completedInWindow / (durationMinutes * 60.0) : 0.0;
 
-    Long scheduledTasks = namedParameterJdbcTemplate.getJdbcTemplate().queryForObject(
-        "SELECT COUNT(*) FROM scheduled_tasks WHERE picked = FALSE",
+    Long readyToRun = namedParameterJdbcTemplate.getJdbcTemplate().queryForObject(
+        "SELECT COUNT(*) FROM scheduled_tasks WHERE picked = FALSE AND execution_time <= NOW()",
         Long.class);
-    double queueBackpressure = scheduledTasks != null ? scheduledTasks.doubleValue() : 0.0;
+    double queueBackpressure = readyToRun != null ? readyToRun.doubleValue() : 0.0;
 
     Long successCount = namedParameterJdbcTemplate.queryForObject(
         "SELECT COUNT(*) FROM " + logTableName + " WHERE time_finished >= :startTime AND " + getSucceededClause(true),
@@ -78,9 +87,29 @@ public class MetricsLogic {
     List<MetricDataPoint> successHistory = getHistory(startTime, durationMinutes, true, false);
     List<MetricDataPoint> failureHistory = getHistory(startTime, durationMinutes, false, false);
     
-    // Approximate system metrics history for visualization
-    List<MetricDataPoint> workerSaturationHistory = getSystemMetricHistory(startTime, durationMinutes, workerSaturation);
-    List<MetricDataPoint> queueBackpressureHistory = getSystemMetricHistory(startTime, durationMinutes, queueBackpressure);
+    // Real system metrics history reconstructed from logs
+    List<MetricDataPoint> workerSaturationHistory = getSaturationHistory(startTime, durationMinutes, threadpoolSize);
+    List<MetricDataPoint> queueBackpressureHistory = getBackpressureHistory(startTime, durationMinutes);
+
+    // Fetch Task Stream data (fixed 10-minute window around now)
+    Instant streamStart = Instant.now().minus(5, ChronoUnit.MINUTES);
+    Instant streamEnd = Instant.now().plus(5, ChronoUnit.MINUTES);
+    
+    no.bekk.dbscheduler.ui.model.TaskDetailsRequestParams logParams = new no.bekk.dbscheduler.ui.model.TaskDetailsRequestParams(
+        no.bekk.dbscheduler.ui.model.TaskRequestParams.TaskFilter.ALL,
+        0, 100, no.bekk.dbscheduler.ui.model.TaskRequestParams.TaskSort.DEFAULT,
+        true, null, null, false, false, streamStart, streamEnd, null, null, true, null);
+    List<LogModel> recentLogs = logLogic.getLogsDirectlyFromDB(logParams);
+
+    List<com.github.kagkarlsson.scheduler.ScheduledExecution<Object>> executions =
+        caching.getExecutionsFromCacheOrDB(true, scheduler);
+    List<TaskModel> scheduledTasks = TaskMapper.mapAllExecutionsToTaskModelUngrouped(executions).stream()
+        .filter(t -> {
+            if (t.getExecutionTime() == null || t.getExecutionTime().isEmpty()) return false;
+            Instant time = t.getExecutionTime().get(0);
+            return time.isAfter(streamStart) && time.isBefore(streamEnd);
+        })
+        .collect(java.util.stream.Collectors.toList());
 
     return new MetricsModel(
         workerSaturation,
@@ -92,22 +121,77 @@ public class MetricsLogic {
         successHistory,
         failureHistory,
         workerSaturationHistory,
-        queueBackpressureHistory
+        queueBackpressureHistory,
+        recentLogs,
+        scheduledTasks
     );
   }
 
-  private List<MetricDataPoint> getSystemMetricHistory(Instant startTime, int totalMinutes, double currentValue) {
+  private List<MetricDataPoint> getSaturationHistory(Instant startTime, int totalMinutes, int threadpoolSize) {
     int points = 20;
-    int secondsPerBucket = (totalMinutes * 60) / points;
+    long secondsPerBucket = (totalMinutes * 60L) / points;
     List<MetricDataPoint> history = new ArrayList<>();
-    java.util.Random random = new java.util.Random();
     
-    for (int i = 0; i < points; i++) {
-      Instant bucketEnd = startTime.plus((long) (i + 1) * secondsPerBucket, ChronoUnit.SECONDS);
-      // Generate some realistic-looking historical data based on current value
-      double variance = currentValue * 0.3;
-      double historicalVal = Math.max(0, currentValue + (random.nextDouble() * 2 - 1) * variance);
-      history.add(new MetricDataPoint(bucketEnd, historicalVal));
+    for (int i = 0; i <= points; i++) {
+      Instant bucketEnd = startTime.plus(i * secondsPerBucket, ChronoUnit.SECONDS);
+      Instant bucketStart = bucketEnd.minus(secondsPerBucket, ChronoUnit.SECONDS);
+      
+      MapSqlParameterSource params = new MapSqlParameterSource()
+          .addValue("bStart", java.sql.Timestamp.from(bucketStart))
+          .addValue("bEnd", java.sql.Timestamp.from(bucketEnd));
+      
+      String query;
+      Double busySeconds = 0.0;
+      
+      if (databaseProductName != null && databaseProductName.toLowerCase().contains("postgres")) {
+          // Calculate average concurrency by summing overlaps of [time_started, time_finished] with [bucketStart, bucketEnd]
+          query = "SELECT SUM(EXTRACT(EPOCH FROM (LEAST(time_finished, :bEnd) - GREATEST(time_started, :bStart)))) " +
+                  "FROM " + logTableName + " " +
+                  "WHERE time_started < :bEnd AND time_finished > :bStart";
+          busySeconds = namedParameterJdbcTemplate.queryForObject(query, params, Double.class);
+      } else {
+          // Fallback: use count as a rough proxy if not Postgres
+          query = "SELECT COUNT(*) FROM " + logTableName + " WHERE time_started < :bEnd AND time_finished > :bStart";
+          Long count = namedParameterJdbcTemplate.queryForObject(query, params, Long.class);
+          busySeconds = (count != null ? count.doubleValue() : 0.0) * (secondsPerBucket / 4.0); 
+      }
+      
+      double avgSaturation = (busySeconds != null ? busySeconds : 0.0) / (secondsPerBucket * threadpoolSize);
+      history.add(new MetricDataPoint(bucketEnd, Math.min(1.0, avgSaturation)));
+    }
+    return history;
+  }
+
+  private List<MetricDataPoint> getBackpressureHistory(Instant startTime, int totalMinutes) {
+    int points = 20;
+    long secondsPerBucket = (totalMinutes * 60L) / points;
+    List<MetricDataPoint> history = new ArrayList<>();
+    
+    for (int i = 0; i <= points; i++) {
+      Instant bucketEnd = startTime.plus(i * secondsPerBucket, ChronoUnit.SECONDS);
+      Instant bucketStart = bucketEnd.minus(secondsPerBucket, ChronoUnit.SECONDS);
+      
+      MapSqlParameterSource params = new MapSqlParameterSource()
+          .addValue("bStart", java.sql.Timestamp.from(bucketStart))
+          .addValue("bEnd", java.sql.Timestamp.from(bucketEnd));
+      
+      String query;
+      Double queuedSeconds = 0.0;
+      
+      if (databaseProductName != null && databaseProductName.toLowerCase().contains("postgres")) {
+          // Calculate average queue depth by summing overlaps of [execution_time, time_started] with [bucketStart, bucketEnd]
+          query = "SELECT SUM(EXTRACT(EPOCH FROM (LEAST(time_started, :bEnd) - GREATEST(execution_time, :bStart)))) " +
+                  "FROM " + logTableName + " " +
+                  "WHERE execution_time < :bEnd AND time_started > :bStart";
+          queuedSeconds = namedParameterJdbcTemplate.queryForObject(query, params, Double.class);
+      } else {
+          query = "SELECT COUNT(*) FROM " + logTableName + " WHERE execution_time < :bEnd AND time_started > :bStart";
+          Long count = namedParameterJdbcTemplate.queryForObject(query, params, Long.class);
+          queuedSeconds = (count != null ? count.doubleValue() : 0.0) * (secondsPerBucket / 2.0);
+      }
+      
+      double avgQueueDepth = (queuedSeconds != null ? queuedSeconds : 0.0) / secondsPerBucket;
+      history.add(new MetricDataPoint(bucketEnd, avgQueueDepth));
     }
     return history;
   }
@@ -124,6 +208,9 @@ public class MetricsLogic {
     int secondsPerBucket = (totalMinutes * 60) / points;
     List<MetricDataPoint> history = new ArrayList<>();
     
+    // Lead-in point at startTime to ensure graph spans the whole width
+    history.add(new MetricDataPoint(startTime, 0.0));
+
     for (int i = 0; i < points; i++) {
       Instant bucketStart = startTime.plus(i * secondsPerBucket, ChronoUnit.SECONDS);
       Instant bucketEnd = bucketStart.plus(secondsPerBucket, ChronoUnit.SECONDS);

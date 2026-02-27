@@ -54,7 +54,8 @@ export const RefreshButton: React.FC<RefreshButtonProps> = ({
       setIsRefreshing(true);
       if (onRefresh) onRefresh();
       if (refetch) await refetch();
-      setTimeout(() => setIsRefreshing(false), 800);
+      // Shorter spin for real-time mode
+      setTimeout(() => setIsRefreshing(false), refreshInterval === 1 ? 400 : 800);
     };
 
     window.addEventListener('db-scheduler-ui-refresh', handleGlobalRefresh);
@@ -64,6 +65,15 @@ export const RefreshButton: React.FC<RefreshButtonProps> = ({
   const handleManualClick = () => {
     triggerManualRefresh();
   };
+
+  const getIcon = () => {
+    if (refreshInterval === 1 || refreshInterval === 0 || isRefreshing) {
+      return <RepeatIcon />;
+    }
+    return <Text fontSize="xs" fontWeight="bold">{countdown}</Text>;
+  };
+
+  const isSpinning = refreshInterval === 1 || isRefreshing;
 
   const { data } = useQuery(
     pollKey && params ? [
@@ -111,6 +121,7 @@ export const RefreshButton: React.FC<RefreshButtonProps> = ({
           borderRadius="md"
         >
           <option value={0}>Off</option>
+          <option value={1}>1s (Real-time)</option>
           <option value={5}>5s</option>
           <option value={10}>10s</option>
           <option value={30}>30s</option>
@@ -120,13 +131,13 @@ export const RefreshButton: React.FC<RefreshButtonProps> = ({
       <Box position="relative" display="inline-block">
         <IconButton
           aria-label="Refresh manually"
-          icon={isRefreshing ? <RepeatIcon /> : <Text fontSize="xs" fontWeight="bold">{refreshInterval > 0 ? countdown : ""}</Text>}
+          icon={getIcon()}
           size="sm"
           onClick={handleManualClick}
           variant="outline"
           bg="white"
-          isDisabled={isRefreshing}
-          className={isRefreshing ? "spin-animation" : ""}
+          isDisabled={isRefreshing && refreshInterval !== 1}
+          className={isSpinning ? "spin-animation" : ""}
           _hover={{ bg: "gray.50" }}
           w="36px"
           h="36px"
@@ -137,7 +148,7 @@ export const RefreshButton: React.FC<RefreshButtonProps> = ({
             to { transform: rotate(360deg); }
           }
           .spin-animation svg {
-            animation: spin 0.8s linear infinite;
+            animation: spin 2s linear infinite;
           }
         `}</style>
         <Box

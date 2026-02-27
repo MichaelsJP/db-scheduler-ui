@@ -11,6 +11,9 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { Log } from 'src/models/Log';
+import { Task } from 'src/models/Task';
+
 export type MetricDataPoint = {
   timestamp: string;
   value: number;
@@ -27,4 +30,6 @@ export type Metrics = {
   failureHistory?: MetricDataPoint[];
   workerSaturationHistory?: MetricDataPoint[];
   queueBackpressureHistory?: MetricDataPoint[];
+  recentLogs?: Log[];
+  scheduledTasks?: Task[];
 };

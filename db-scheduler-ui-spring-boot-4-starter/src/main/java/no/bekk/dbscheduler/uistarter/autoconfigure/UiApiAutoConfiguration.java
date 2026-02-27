@@ -134,9 +134,11 @@ public class UiApiAutoConfiguration {
       Scheduler scheduler,
       DataSource dataSource,
       DbSchedulerCustomizer customizer,
+      Caching caching,
+      LogLogic logLogic,
       @Value("${db-scheduler-log.table-name:scheduled_execution_logs}") String logTableName) {
     return new MetricsLogic(
-        scheduler, customizer.dataSource().orElse(dataSource), logTableName);
+        scheduler, customizer.dataSource().orElse(dataSource), logTableName, caching, logLogic);
   }
 
   @Bean
