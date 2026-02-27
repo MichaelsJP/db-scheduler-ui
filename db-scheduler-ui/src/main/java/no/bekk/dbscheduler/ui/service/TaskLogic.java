@@ -129,30 +129,6 @@ public class TaskLogic {
     return new GetTasksResponse(tasks.size(), pagedTasks, params.getSize());
   }
 
-  public GetTasksResponse getAllTasksUngrouped(TaskRequestParams params) {
-    List<ScheduledExecution<Object>> executions =
-        caching.getExecutionsFromCacheOrDB(params.isRefresh(), scheduler);
-
-    List<TaskModel> tasks = TaskMapper.mapAllExecutionsToTaskModelUngrouped(executions);
-
-    tasks =
-        QueryUtils.searchByTaskName(
-            tasks, params.getSearchTermTaskName(), params.isTaskNameExactMatch());
-    tasks =
-        QueryUtils.searchByTaskInstance(
-            tasks, params.getSearchTermTaskInstance(), params.isTaskInstanceExactMatch());
-    tasks = QueryUtils.filterByTags(tasks, params.getTags());
-    if (!showData) {
-      tasks.forEach(e -> e.setTaskData(List.of()));
-    }
-    tasks = QueryUtils.filterTasksByTime(tasks, params.getStartTime(), params.getEndTime());
-    tasks =
-        QueryUtils.sortTasks(
-            QueryUtils.filterTasks(tasks, params.getFilter()), params.getSorting(), params.isAsc());
-    
-    return new GetTasksResponse(tasks.size(), tasks, tasks.size());
-  }
-
   public GetTasksResponse getTask(TaskDetailsRequestParams params) {
     List<ScheduledExecution<Object>> executions =
         caching.getExecutionsFromCacheOrDB(params.isRefresh(), scheduler);

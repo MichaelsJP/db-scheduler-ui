@@ -27,8 +27,6 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { getMetrics, METRICS_QUERY_KEY } from 'src/services/getMetrics';
-import { getTimeline, TIMELINE_QUERY_KEY } from 'src/services/getTimeline';
-import { TimelineChart } from 'src/pages/TimelinePage';
 import { LinePath, Bar } from '@visx/shape';
 import { scaleTime, scaleLinear } from '@visx/scale';
 import { curveMonotoneX } from '@visx/curve';
@@ -189,7 +187,6 @@ export const MetricsPage: React.FC = () => {
   useEffect(() => {
     const handleGlobalRefresh = () => {
       queryClient.invalidateQueries([METRICS_QUERY_KEY]);
-      queryClient.invalidateQueries([TIMELINE_QUERY_KEY]);
     };
 
     window.addEventListener('db-scheduler-ui-refresh', handleGlobalRefresh);
@@ -201,10 +198,6 @@ export const MetricsPage: React.FC = () => {
     return new Date(Math.floor(time / 10000) * 10000);
   }, [now]);
 
-  // Adjust start/end based on timeWindow (half of window before, half after 'now' for perspective)
-  const start = useMemo(() => new Date(stabilizedNow.getTime() - 1000 * 60 * (timeWindow / 2)), [stabilizedNow, timeWindow]);
-  const end = useMemo(() => new Date(stabilizedNow.getTime() + 1000 * 60 * (timeWindow / 2)), [stabilizedNow, timeWindow]);
-
   // Domain for metrics sparklines (always last durationMinutes)
   const metricsMinX = useMemo(() => stabilizedNow.getTime() - 1000 * 60 * timeWindow, [stabilizedNow, timeWindow]);
   const metricsMaxX = useMemo(() => stabilizedNow.getTime(), [stabilizedNow]);
@@ -213,15 +206,6 @@ export const MetricsPage: React.FC = () => {
     refetchInterval: false,
     keepPreviousData: true,
   });
-
-  const { data: timeline, isLoading: timelineLoading } = useQuery(
-    [TIMELINE_QUERY_KEY, start.toISOString(), end.toISOString()],
-    () => getTimeline(start, end),
-    { 
-      refetchInterval: 5000, // Small local update interval for smooth animation
-      keepPreviousData: true 
-    }
-  );
 
   return (
     <VStack align="stretch" spacing={8} pb={10}>
@@ -301,33 +285,6 @@ export const MetricsPage: React.FC = () => {
           />
         </SimpleGrid>
       )}
-
-      <Box pt={4}>
-        <Heading size="md" mb={4}>Live Timeline</Heading>
-        <Box bg="white" shadow="md" borderRadius="xl" position="relative" overflow="hidden" minH="400px">
-          {timelineLoading && !timeline ? (
-            <Box p={10}>Loading timeline...</Box>
-          ) : (
-            <ParentSize debounceTime={50}>
-              {({ width, height }) => (
-                width > 0 && height > 0 && timeline ? (
-                  <>
-                    {console.log('Rendering Timeline with:', timeline)}
-                    <TimelineChart 
-                      width={width} 
-                      height={height} 
-                      timeline={timeline} 
-                      now={now} 
-                      start={start} 
-                      end={end} 
-                    />
-                  </>
-                ) : null
-              )}
-            </ParentSize>
-          )}
-        </Box>
-      </Box>
     </VStack>
   );
 };
