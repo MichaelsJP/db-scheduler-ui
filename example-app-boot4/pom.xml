@@ -2,7 +2,7 @@
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>no.bekk.db-scheduler-ui</groupId>
+        <groupId>com.github.MichaelsJP.db-scheduler-ui</groupId>
         <artifactId>db-scheduler-ui-parent</artifactId>
         <version>main-SNAPSHOT</version>
     </parent>
@@ -25,12 +25,12 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
-                <groupId>com.github.kagkarlsson</groupId>
+                <groupId>com.github.MichaelsJP</groupId>
                 <artifactId>db-scheduler</artifactId>
                 <version>${db-scheduler-boot4.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.github.kagkarlsson</groupId>
+                <groupId>com.github.MichaelsJP</groupId>
                 <artifactId>db-scheduler-spring-boot-4-starter</artifactId>
                 <version>${db-scheduler-boot4.version}</version>
             </dependency>
@@ -48,7 +48,7 @@
             <artifactId>spring-boot-devtools</artifactId>
         </dependency>
         <dependency>
-            <groupId>no.bekk.db-scheduler-ui</groupId>
+            <groupId>com.github.MichaelsJP.db-scheduler-ui</groupId>
             <artifactId>db-scheduler-ui-spring-boot-4-starter</artifactId>
             <version>main-SNAPSHOT</version>
         </dependency>

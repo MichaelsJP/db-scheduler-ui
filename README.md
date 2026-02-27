@@ -41,7 +41,7 @@ dashboard for monitoring and basic administration of tasks.
    **For Spring Boot 3:**
    ```xml
    <dependency>
-       <groupId>no.bekk.db-scheduler-ui</groupId>
+       <groupId>com.github.MichaelsJP.db-scheduler-ui</groupId>
        <artifactId>db-scheduler-ui-starter</artifactId>
        <version>4.6.0</version>
    </dependency>
@@ -50,7 +50,7 @@ dashboard for monitoring and basic administration of tasks.
    **For Spring Boot 4:**
    ```xml
    <dependency>
-       <groupId>no.bekk.db-scheduler-ui</groupId>
+       <groupId>com.github.MichaelsJP.db-scheduler-ui</groupId>
        <artifactId>db-scheduler-ui-spring-boot-4-starter</artifactId>
        <version>4.6.0</version>
    </dependency>
