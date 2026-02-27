@@ -48,6 +48,7 @@ public class SpaFallbackMvc implements WebMvcConfigurer {
   static class SpaFallbackResolver extends PathResourceResolver {
 
     private final String indexHtml;
+    private final long lastModified = System.currentTimeMillis();
 
     public SpaFallbackResolver(String indexHtml) {
       this.indexHtml = indexHtml;
@@ -62,7 +63,26 @@ public class SpaFallbackMvc implements WebMvcConfigurer {
         return requestedResource;
       }
 
-      return new ByteArrayResource(indexHtml.getBytes(StandardCharsets.UTF_8));
+      return new IndexResource(indexHtml.getBytes(StandardCharsets.UTF_8), lastModified);
+    }
+  }
+
+  private static class IndexResource extends ByteArrayResource {
+    private final long lastModified;
+
+    public IndexResource(byte[] byteArray, long lastModified) {
+      super(byteArray);
+      this.lastModified = lastModified;
+    }
+
+    @Override
+    public String getFilename() {
+      return "index.html";
+    }
+
+    @Override
+    public long lastModified() {
+      return lastModified;
     }
   }
 }
