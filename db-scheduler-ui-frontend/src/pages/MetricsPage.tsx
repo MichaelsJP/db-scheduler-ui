@@ -37,7 +37,7 @@ export const MetricsPage: React.FC = () => {
 
   return (
     <VStack align="stretch" spacing={8}>
-      <Heading size="lg">Metrics Dashboard</Heading>
+      <Heading size="lg">Overview</Heading>
       
       <SimpleGrid columns={{ base: 1, md: 3 }} spacing={10}>
         <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" bg="white">

@@ -132,6 +132,7 @@ export const LogList: React.FC = () => {
         <Box flex="1">Status</Box>
         <Box flex={2}>Task Name</Box>
         <Box flex="2">Task-ID</Box>
+        <Box flex="2">Tags</Box>
         <SortButton
           currentSort={currentSort}
           setCurrentSort={setCurrentSort}

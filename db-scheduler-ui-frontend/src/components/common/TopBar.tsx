@@ -11,9 +11,9 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Box, Button, Text } from '@chakra-ui/react';
+import { Box, Button, HStack, Text } from '@chakra-ui/react';
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { LogoIcon } from 'src/assets/icons/Logo';
 import colors from 'src/styles/colors';
 import { getShowHistory } from 'src/utils/config';
@@ -24,14 +24,43 @@ interface TopBarProps {
 
 export const TopBar: React.FC<TopBarProps> = ({ title }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const showHistory = getShowHistory();
+
+  const NavButton = ({ label, to, isActive }: { label: string; to: string; isActive: boolean }) => (
+    <Button
+      _hover={{
+        bgColor: colors.primary['100'],
+        borderColor: colors.dbBlue,
+        color: colors.primary['400'],
+      }}
+      _active={{
+        borderColor: colors.primary['200'],
+        color: colors.primary['300'],
+      }}
+      bgColor={colors.primary['100']}
+      color={colors.dbBlue}
+      borderBottom="2px"
+      borderRadius={'0'}
+      borderColor={isActive ? colors.dbBlue : 'transparent'}
+      onClick={() => navigate(to)}
+      aria-label={`${label} button`}
+      px={4}
+      height="64px"
+    >
+      {label}
+    </Button>
+  );
 
   return (
     <Box
       backgroundColor={colors.primary['100']}
       display={'flex'}
       alignItems={'center'}
-      gap={'12'}
+      gap={'8'}
+      borderBottom="1px solid"
+      borderColor={colors.primary['300']}
+      px={4}
     >
       <Text
         as={'button'}
@@ -41,65 +70,20 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
         fontSize={'2xl'}
         p={4}
         fontWeight={'semibold'}
+        display="flex"
+        alignItems="center"
       >
         <LogoIcon mr={2} />
         {title}
       </Text>
-      <Box>
+      <HStack spacing={0} h="64px">
+        <NavButton label="Scheduled" to="/" isActive={location.pathname === '/' || (!location.pathname.includes('/history') && !location.pathname.includes('/metrics') && !location.pathname.includes('/timeline'))} />
+        <NavButton label="Overview" to="/metrics" isActive={location.pathname.includes('/metrics')} />
         {showHistory && (
-          <>
-            <Button
-              _hover={{
-                bgColor: colors.primary['100'],
-                borderColor: colors.dbBlue,
-                color: colors.primary['400'],
-              }}
-              _active={{
-                borderColor: colors.primary['200'],
-                color: colors.primary['300'],
-              }}
-              bgColor={colors.primary['100']}
-              color={colors.dbBlue}
-              borderBottom="2px"
-              borderRadius={'0'}
-              borderColor={
-                !window.location.toString().includes('db-scheduler/history/')
-                  ? colors.dbBlue
-                  : colors.primary['300']
-              }
-              onClick={() => navigate('/')}
-              aria-label={'Home button'}
-              marginRight={12}
-            >
-              Scheduled
-            </Button>
-            <Button
-              _hover={{
-                bgColor: colors.primary['100'],
-                borderColor: colors.dbBlue,
-                color: colors.primary['400'],
-              }}
-              _active={{
-                borderColor: colors.running['200'],
-                color: colors.primary['300'],
-              }}
-              bgColor={colors.primary['100']}
-              color={colors.dbBlue}
-              borderBottom="2px"
-              borderRadius={'0'}
-              borderColor={
-                window.location.toString().includes('history')
-                  ? colors.dbBlue
-                  : colors.primary['300']
-              }
-              onClick={() => navigate(`/history/all`)}
-              aria-label={'History button'}
-            >
-              History
-            </Button>
-          </>
+          <NavButton label="History" to="/history/all" isActive={location.pathname.includes('/history')} />
         )}
-      </Box>
+        <NavButton label="Timeline" to="/timeline" isActive={location.pathname.includes('/timeline')} />
+      </HStack>
     </Box>
   );
 };

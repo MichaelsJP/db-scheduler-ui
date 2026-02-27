@@ -66,6 +66,14 @@ const TitleRow: React.FC<TitleRowProps> = ({
     >
       Task-ID
     </Box>
+    <Box
+      flex="2"
+      textAlign="left"
+      textColor={colors.primary['600']}
+      fontSize={'sm'}
+    >
+      Tags
+    </Box>
     <SortButton
       currentSort={currentSort}
       setCurrentSort={setCurrentSort}

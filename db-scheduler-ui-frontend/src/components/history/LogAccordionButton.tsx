@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { AccordionButton, AccordionIcon, Box, HStack, VStack, Text } from '@chakra-ui/react';
+import { AccordionButton, AccordionIcon, Box, HStack } from '@chakra-ui/react';
 import { LogStatus } from 'src/components/history/LogStatus';
 import { dateFormatText } from 'src/utils/dateFormatText';
 import React from 'react';
@@ -55,17 +55,17 @@ export const LogAccordionButton: React.FC<LogAccordionButtonProps> = (
             )}
           </Box>
           <Box flex="2" textAlign="left" minWidth={28} hidden={!!taskName}>
-            <VStack align="start" spacing={0}>
-              <Text>{props.taskName}</Text>
-              <HStack wrap="wrap" spacing={1}>
-                {props.tags && props.tags.map(tag => (
-                  <TagBadge key={tag} tag={tag} />
-                ))}
-              </HStack>
-            </VStack>
+            {props.taskName}
           </Box>
           <Box flex="2" textAlign="left" minWidth={28}>
             {props.taskInstance}
+          </Box>
+          <Box flex="2" textAlign="left">
+            <HStack wrap="wrap" spacing={1}>
+              {props.tags && props.tags.map(tag => (
+                <TagBadge key={tag} tag={tag} />
+              ))}
+            </HStack>
           </Box>
           <Box flex={'2'} textAlign={'left'} minWidth={28}>
             {dateFormatText(new Date(props.timeFinished))}

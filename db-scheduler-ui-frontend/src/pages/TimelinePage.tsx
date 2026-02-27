@@ -11,43 +11,30 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Box, Heading, VStack, useDimensions, Button, HStack } from '@chakra-ui/react';
+import { Box, Heading, VStack, Button, HStack } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
-import React, { useRef, useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { getTimeline, TIMELINE_QUERY_KEY } from 'src/services/getTimeline';
 import { Group } from '@visx/group';
 import { AxisBottom } from '@visx/axis';
 import { scaleTime } from '@visx/scale';
 import { GridColumns } from '@visx/grid';
-import { motion } from 'framer-motion';
+import { ParentSize } from '@visx/responsive';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Timeline } from 'src/models/Timeline';
+import { Log } from 'src/models/Log';
+import { Task } from 'src/models/Task';
 
-export const TimelinePage: React.FC = () => {
-  const containerRef = useRef(null);
-  const dimensions = useDimensions(containerRef);
-  
-  const [now, setNow] = useState(new Date());
-  
-  useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(interval);
-  }, []);
+interface TimelineChartProps {
+  width: number;
+  height: number;
+  timeline: Timeline;
+  now: Date;
+  start: Date;
+  end: Date;
+}
 
-  const [viewWindow, setViewWindow] = useState({
-    startOffset: -1000 * 60 * 30, // 30m ago
-    endOffset: 1000 * 60 * 30,    // 30m future
-  });
-
-  const start = useMemo(() => new Date(now.getTime() + viewWindow.startOffset), [now, viewWindow.startOffset]);
-  const end = useMemo(() => new Date(now.getTime() + viewWindow.endOffset), [now, viewWindow.endOffset]);
-
-  const { data: timeline, isLoading } = useQuery(
-    [TIMELINE_QUERY_KEY, start.toISOString(), end.toISOString()],
-    () => getTimeline(start, end),
-    { refetchInterval: 5000 }
-  );
-
-  const width = dimensions?.borderBox.width ?? 800;
-  const height = 500;
+const TimelineChart = ({ width, height, timeline, now, start, end }: TimelineChartProps) => {
   const margin = { top: 40, right: 40, bottom: 60, left: 40 };
 
   const xScale = useMemo(() => scaleTime({
@@ -55,91 +42,138 @@ export const TimelinePage: React.FC = () => {
     range: [margin.left, width - margin.right],
   }), [start, end, width, margin.left, margin.right]);
 
-  const snapToNow = () => {
-    setViewWindow({
-      startOffset: -1000 * 60 * 30,
-      endOffset: 1000 * 60 * 30,
-    });
-  };
+  return (
+    <svg width={width} height={height}>
+      <GridColumns scale={xScale} width={width} height={height - margin.bottom} stroke="#f0f0f0" />
+      <Group top={margin.top}>
+        <AnimatePresence>
+          {/* Past Logs */}
+          {timeline.past.map((log: Log, i: number) => (
+            <motion.rect
+              key={`log-${log.id}`}
+              initial={{ opacity: 0 }}
+              animate={{ 
+                opacity: 0.8,
+                x: xScale(new Date(log.timeStarted)),
+                width: Math.max(5, xScale(new Date(log.timeFinished)) - xScale(new Date(log.timeStarted)))
+              }}
+              y={i * 25 % (height - margin.bottom - margin.top)}
+              height={20}
+              fill={log.succeeded ? '#48BB78' : '#F56565'}
+              rx={4}
+              transition={{ duration: 0.5 }}
+            />
+          ))}
+          {/* Future Tasks */}
+          {timeline.future.map((task: Task, i: number) => (
+            <motion.rect
+              key={`task-${task.taskName}-${i}`}
+              initial={{ opacity: 0 }}
+              animate={{ 
+                opacity: 0.6,
+                x: xScale(new Date(task.executionTime[0]))
+              }}
+              y={(i * 25 + 200) % (height - margin.bottom - margin.top)}
+              width={12}
+              height={20}
+              fill="#4299E1"
+              rx={4}
+              transition={{ duration: 0.5 }}
+            />
+          ))}
+        </AnimatePresence>
+        
+        {/* "Now" Line */}
+        <motion.line
+          animate={{ x1: xScale(now), x2: xScale(now) }}
+          y1={-margin.top}
+          y2={height - margin.bottom}
+          stroke="#E53E3E"
+          strokeWidth={3}
+          strokeDasharray="5 3"
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        />
+        <motion.text
+          animate={{ x: xScale(now) + 5 }}
+          y={-10}
+          fontSize="xs"
+          fontWeight="bold"
+          fill="#E53E3E"
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        >
+          NOW
+        </motion.text>
+      </Group>
+      <AxisBottom
+        top={height - margin.bottom}
+        scale={xScale}
+        numTicks={width > 500 ? 10 : 5}
+        stroke="#718096"
+        tickStroke="#718096"
+        tickLabelProps={() => ({
+          fill: '#4A5568',
+          fontSize: 11,
+          textAnchor: 'middle',
+        })}
+      />
+    </svg>
+  );
+};
 
-  if (isLoading || !timeline) {
-    return <Box>Loading timeline...</Box>;
-  }
+export const TimelinePage: React.FC = () => {
+  const [now, setNow] = useState(new Date());
+  
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Stabilize the domain by rounding to the nearest 10 seconds
+  const stabilizedNow = useMemo(() => {
+    const time = now.getTime();
+    return new Date(Math.floor(time / 10000) * 10000);
+  }, [now]);
+
+  const [viewWindow] = useState({
+    startOffset: -1000 * 60 * 30, // 30m ago
+    endOffset: 1000 * 60 * 30,    // 30m future
+  });
+
+  const start = useMemo(() => new Date(stabilizedNow.getTime() + viewWindow.startOffset), [stabilizedNow, viewWindow.startOffset]);
+  const end = useMemo(() => new Date(stabilizedNow.getTime() + viewWindow.endOffset), [stabilizedNow, viewWindow.endOffset]);
+
+  const { data: timeline } = useQuery(
+    [TIMELINE_QUERY_KEY, start.toISOString(), end.toISOString()],
+    () => getTimeline(start, end),
+    { 
+      refetchInterval: 5000,
+      keepPreviousData: true 
+    }
+  );
 
   return (
-    <VStack align="stretch" spacing={8} ref={containerRef}>
-      <HStack justify="space-between">
-        <Heading size="lg">Timeline View</Heading>
-        <Button onClick={snapToNow} colorScheme="blue" size="sm">Snap to Now</Button>
+    <VStack align="stretch" spacing={8} h="full" w="full">
+      <HStack justify="space-between" px={4}>
+        <Heading size="lg">Timeline</Heading>
+        <Button onClick={() => {}} colorScheme="blue" size="sm">Snap to Now</Button>
       </HStack>
-      <Box h={height} bg="white" shadow="md" borderRadius="xl" position="relative" overflow="hidden">
-        <svg width={width} height={height}>
-          <GridColumns scale={xScale} width={width} height={height - margin.bottom} stroke="#f0f0f0" />
-          <Group top={margin.top}>
-            {/* Past Logs */}
-            {timeline.past.map((log, i) => (
-              <motion.rect
-                key={`log-${log.id}`}
-                initial={{ opacity: 0 }}
-                animate={{ 
-                  opacity: 0.8,
-                  x: xScale(new Date(log.timeStarted)),
-                  width: Math.max(5, xScale(new Date(log.timeFinished)) - xScale(new Date(log.timeStarted)))
-                }}
-                y={i * 25 % (height - margin.bottom - margin.top)}
-                height={20}
-                fill={log.succeeded ? '#48BB78' : '#F56565'}
-                rx={4}
+      <Box flex={1} bg="white" shadow="md" borderRadius="xl" position="relative" overflow="hidden" minH="500px">
+        {timeline ? (
+          <ParentSize>
+            {({ width, height }) => (
+              <TimelineChart 
+                width={width} 
+                height={height} 
+                timeline={timeline} 
+                now={now} 
+                start={start} 
+                end={end} 
               />
-            ))}
-            {/* Future Tasks */}
-            {timeline.future.map((task, i) => (
-              <motion.rect
-                key={`task-${task.taskName}-${i}`}
-                initial={{ opacity: 0 }}
-                animate={{ 
-                  opacity: 0.6,
-                  x: xScale(new Date(task.executionTime[0]))
-                }}
-                y={(i * 25 + 200) % (height - margin.bottom - margin.top)}
-                width={12}
-                height={20}
-                fill="#4299E1"
-                rx={4}
-              />
-            ))}
-            {/* "Now" Line */}
-            <motion.line
-              animate={{ x1: xScale(now), x2: xScale(now) }}
-              y1={-margin.top}
-              y2={height - margin.bottom}
-              stroke="#E53E3E"
-              strokeWidth={3}
-              strokeDasharray="5 3"
-            />
-            <motion.text
-              animate={{ x: xScale(now) + 5 }}
-              y={-10}
-              fontSize="xs"
-              fontWeight="bold"
-              fill="#E53E3E"
-            >
-              NOW
-            </motion.text>
-          </Group>
-          <AxisBottom
-            top={height - margin.bottom}
-            scale={xScale}
-            numTicks={width > 500 ? 10 : 5}
-            stroke="#718096"
-            tickStroke="#718096"
-            tickLabelProps={() => ({
-              fill: '#4A5568',
-              fontSize: 11,
-              textAnchor: 'middle',
-            })}
-          />
-        </svg>
+            )}
+          </ParentSize>
+        ) : (
+          <Box p={10}>Loading timeline...</Box>
+        )}
       </Box>
     </VStack>
   );

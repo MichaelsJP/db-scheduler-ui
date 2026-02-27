@@ -18,7 +18,6 @@ import {
   Flex,
   HStack,
   Text,
-  VStack,
 } from '@chakra-ui/react';
 import { StatusBox } from 'src/components/common/StatusBox';
 import { TaskRunButton } from 'src/components/input/TaskRunButton';
@@ -95,14 +94,7 @@ export const TaskAccordionButton: React.FC<TaskAccordionButtonProps> = (
               alignItems={'center'}
               overflow={'hidden'}
             >
-              <VStack align="start" spacing={0}>
-                <Text>{taskName}</Text>
-                <HStack wrap="wrap" spacing={1}>
-                  {tags && tags.map(tag => (
-                    <TagBadge key={tag} tag={tag} />
-                  ))}
-                </HStack>
-              </VStack>
+              <Text>{taskName}</Text>
               {isStatus('Group', props) && (
                 <Box ml={2}>
                   <NumberCircleGroup {...props} />
@@ -122,6 +114,14 @@ export const TaskAccordionButton: React.FC<TaskAccordionButtonProps> = (
               </Text>
             )}
           </Flex>
+
+          <Box flex="2" textAlign="left">
+            <HStack wrap="wrap" spacing={1}>
+              {tags && tags.map(tag => (
+                <TagBadge key={tag} tag={tag} />
+              ))}
+            </HStack>
+          </Box>
 
           <HStack
             flex="2"

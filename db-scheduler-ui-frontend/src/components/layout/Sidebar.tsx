@@ -15,50 +15,14 @@ import {
   Box,
   VStack,
   Text,
-  Link,
-  Icon,
   HStack,
-  Divider,
   Collapse,
   useDisclosure,
 } from '@chakra-ui/react';
 import React from 'react';
-import { NavLink as RouterLink, useLocation } from 'react-router-dom';
 import { ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { TagBadge } from 'src/components/common/TagBadge';
 import colors from 'src/styles/colors';
-
-const NavItem = ({
-  icon,
-  label,
-  to,
-  ...rest
-}: {
-  icon?: React.ElementType;
-  label: string;
-  to: string;
-}) => {
-  const location = useLocation();
-  const isActive = location.pathname === to;
-
-  return (
-    <Link
-      as={RouterLink}
-      to={to}
-      w="full"
-      _hover={{ textDecoration: 'none', bg: colors.primary['200'] }}
-      bg={isActive ? colors.primary['200'] : 'transparent'}
-      p={2}
-      borderRadius="md"
-      {...rest}
-    >
-      <HStack>
-        {icon && <Icon as={icon} />}
-        <Text fontWeight={isActive ? 'bold' : 'normal'}>{label}</Text>
-      </HStack>
-    </Link>
-  );
-};
 
 export const Sidebar: React.FC<{ tags: string[]; onTagClick: (tag: string) => void }> = ({
   tags,
@@ -79,15 +43,6 @@ export const Sidebar: React.FC<{ tags: string[]; onTagClick: (tag: string) => vo
       top="64px"
       overflowY="auto"
     >
-      <VStack align="stretch" spacing={1}>
-        <NavItem label="Overview" to="/" />
-        <NavItem label="Metrics" to="/metrics" />
-        <NavItem label="History" to="/history/all" />
-        <NavItem label="Timeline" to="/timeline" />
-      </VStack>
-
-      <Divider my={4} />
-
       <Box>
         <HStack
           justify="space-between"
