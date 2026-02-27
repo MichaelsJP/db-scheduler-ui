@@ -39,6 +39,7 @@ import colors from 'src/styles/colors';
 import { RefreshButton } from 'src/components/input/RefreshButton';
 import { TaskStream } from './TaskStream';
 import { useRefresh } from 'src/context/RefreshContext';
+import { motion } from 'framer-motion';
 
 const bisectDate = bisector<MetricDataPoint, Date>(d => new Date(d.timestamp)).left;
 
@@ -52,12 +53,16 @@ const Sparkline = React.memo(({ data, width, height, color, minX, maxX }: { data
   } = useTooltip<MetricDataPoint>();
 
   const values = useMemo(() => data?.map(d => d.value) || [], [data]);
-  const dataMaxX = useMemo(() => Math.max(...(data?.map(d => new Date(d.timestamp).getTime()) || []), maxX), [data, maxX]);
+  // STABILIZATION: Use the actual data timestamps for the domain
+  const actualMaxX = useMemo(() => {
+      if (!data || data.length === 0) return maxX;
+      return Math.max(...data.map(d => new Date(d.timestamp).getTime()));
+  }, [data, maxX]);
 
   const xScale = useMemo(() => scaleTime({
-    domain: [minX, dataMaxX],
+    domain: [minX, actualMaxX],
     range: [0, width],
-  }), [minX, dataMaxX, width]);
+  }), [minX, actualMaxX, width]);
 
   const yScale = useMemo(() => scaleLinear({
     domain: [0, Math.max(...values) * 1.1 || 1],
@@ -91,38 +96,44 @@ const Sparkline = React.memo(({ data, width, height, color, minX, maxX }: { data
 
   return (
     <Box position="relative">
-      <svg width={width} height={height} style={{ overflow: 'hidden' }}>
-        <LinePath
-          data={data}
-          x={d => xScale(new Date(d.timestamp)) ?? 0}
-          y={d => yScale(d.value) ?? 0}
-          stroke={color}
-          strokeWidth={2}
-          strokeOpacity={0.5}
-          curve={curveMonotoneX}
-        />
-        <Bar
-          width={width}
-          height={height}
-          fill="transparent"
-          onMouseMove={handleTooltip}
-          onTouchMove={handleTooltip}
-          onMouseLeave={() => hideTooltip()}
-        />
-        {tooltipData && (
-          <g>
-            <circle
-              cx={tooltipLeft}
-              cy={tooltipTop}
-              r={4}
-              fill={color}
-              stroke="white"
-              strokeWidth={2}
-              pointerEvents="none"
-            />
-          </g>
-        )}
-      </svg>
+      <motion.div
+        initial={false}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <svg width={width} height={height} style={{ overflow: 'hidden' }}>
+          <LinePath
+            data={data}
+            x={d => xScale(new Date(d.timestamp)) ?? 0}
+            y={d => yScale(d.value) ?? 0}
+            stroke={color}
+            strokeWidth={2}
+            strokeOpacity={0.5}
+            curve={curveMonotoneX}
+          />
+          <Bar
+            width={width}
+            height={height}
+            fill="transparent"
+            onMouseMove={handleTooltip}
+            onTouchMove={handleTooltip}
+            onMouseLeave={() => hideTooltip()}
+          />
+          {tooltipData && (
+            <g>
+              <circle
+                cx={tooltipLeft}
+                cy={tooltipTop}
+                r={4}
+                fill={color}
+                stroke="white"
+                strokeWidth={2}
+                pointerEvents="none"
+              />
+            </g>
+          )}
+        </svg>
+      </motion.div>
       {tooltipData && (
         <TooltipWithBounds
           key={`tooltip-${tooltipData.timestamp}-${tooltipData.value}`}

@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box, Text, VStack, Tooltip, HStack } from '@chakra-ui/react';
 import { Log } from 'src/models/Log';
 import { Task } from 'src/models/Task';
@@ -37,8 +37,18 @@ const getRow = (name: string, height: number) => {
     return (Math.abs(hash) % rowCount) * 25 + 30;
 };
 
-export const TaskStream: React.FC<TaskStreamProps> = ({ logs, tasks, anchorTime }) => {
-  const now = anchorTime || Date.now();
+export const TaskStream: React.FC<TaskStreamProps> = ({ logs, tasks }) => {
+  const [smoothNow, setSmoothNow] = useState(Date.now());
+  const requestRef = useRef<number>();
+
+  useEffect(() => {
+    const animate = () => {
+      setSmoothNow(Date.now());
+      requestRef.current = requestAnimationFrame(animate);
+    };
+    requestRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(requestRef.current!);
+  }, []);
 
   return (
     <VStack align="stretch" spacing={2} w="full">
@@ -47,8 +57,8 @@ export const TaskStream: React.FC<TaskStreamProps> = ({ logs, tasks, anchorTime 
           {({ width, height }) => {
             if (width < 10) return null;
             
-            const startMs = now - STREAM_WINDOW_MS / 2;
-            const endMs = now + STREAM_WINDOW_MS / 2;
+            const startMs = smoothNow - STREAM_WINDOW_MS / 2;
+            const endMs = smoothNow + STREAM_WINDOW_MS / 2;
 
             const xScale = scaleTime({
               domain: [new Date(startMs), new Date(endMs)],
@@ -88,15 +98,29 @@ export const TaskStream: React.FC<TaskStreamProps> = ({ logs, tasks, anchorTime 
 
                   return (
                     <Tooltip key={log.id} label={`${log.taskName} (${log.succeeded ? 'Success' : 'Failed'})`}>
-                        <rect
-                            x={x}
-                            y={y}
-                            width={w}
-                            height={18}
-                            fill={log.succeeded ? '#48BB78' : '#F56565'}
-                            opacity={0.7}
-                            rx={4}
-                        />
+                        <g>
+                            <rect
+                                x={x}
+                                y={y}
+                                width={w}
+                                height={18}
+                                fill={log.succeeded ? '#48BB78' : '#F56565'}
+                                opacity={0.7}
+                                rx={4}
+                            />
+                            {w > 40 && (
+                                <text
+                                    x={x + 5}
+                                    y={y + 13}
+                                    fontSize="10px"
+                                    fill="white"
+                                    fontWeight="bold"
+                                    pointerEvents="none"
+                                >
+                                    {log.taskName}
+                                </text>
+                            )}
+                        </g>
                     </Tooltip>
                   );
                 })}
@@ -110,19 +134,41 @@ export const TaskStream: React.FC<TaskStreamProps> = ({ logs, tasks, anchorTime 
                   const isRunning = Array.isArray(task.picked) ? task.picked[0] : task.picked;
                   const instId = Array.isArray(task.taskInstance) ? task.taskInstance[0] : task.taskInstance;
                   const y = getRow(task.taskName, height);
-                  const x = xScale(execTime);
+                  const startX = xScale(execTime);
+                  
+                  const x = startX;
+                  let w = 12;
+
+                  if (isRunning) {
+                      // Stretching running task effect
+                      w = Math.max(20, (width/2) - startX);
+                  }
 
                   return (
                     <Tooltip key={`${task.taskName}-${instId || i}`} label={`${task.taskName} (${isRunning ? 'Running' : 'Scheduled'})`}>
-                        <rect
-                            x={isRunning ? width/2 - 10 : x}
-                            y={y}
-                            width={isRunning ? 20 : 10}
-                            height={18}
-                            fill={isRunning ? '#ED8936' : '#4299E1'}
-                            opacity={isRunning ? 0.9 : 0.6}
-                            rx={isRunning ? 4 : 5}
-                        />
+                        <g>
+                            <rect
+                                x={x}
+                                y={y}
+                                width={isRunning ? w : 10}
+                                height={18}
+                                fill={isRunning ? '#ED8936' : '#4299E1'}
+                                opacity={isRunning ? 0.9 : 0.6}
+                                rx={isRunning ? 4 : 5}
+                            />
+                            {(isRunning || w > 40) && (
+                                <text
+                                    x={x + 5}
+                                    y={y + 13}
+                                    fontSize="10px"
+                                    fill="white"
+                                    fontWeight="bold"
+                                    pointerEvents="none"
+                                >
+                                    {task.taskName}
+                                </text>
+                            )}
+                        </g>
                     </Tooltip>
                   );
                 })}

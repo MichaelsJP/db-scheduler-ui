@@ -57,7 +57,14 @@ public class MetricsLogic {
     int threadpoolSize = scheduler.getThreadpoolSize();
     double workerSaturation = (double) currentlyExecuting / threadpoolSize;
 
-    Instant startTime = Instant.now().minus(durationMinutes, ChronoUnit.MINUTES);
+    // STABILIZATION: Align startTime to fixed bucket boundaries (e.g. 5s)
+    int points = 20;
+    long secondsPerBucket = (durationMinutes * 60L) / points;
+    long nowMillis = Instant.now().toEpochMilli();
+    long bucketAlignedNowMillis = (nowMillis / (secondsPerBucket * 1000)) * (secondsPerBucket * 1000);
+    Instant alignedNow = Instant.ofEpochMilli(bucketAlignedNowMillis);
+    Instant startTime = alignedNow.minus(durationMinutes, ChronoUnit.MINUTES);
+
     MapSqlParameterSource params = new MapSqlParameterSource()
         .addValue("startTime", java.sql.Timestamp.from(startTime));
     
@@ -83,7 +90,7 @@ public class MetricsLogic {
         params,
         Long.class);
 
-    // Generate historical data points (e.g., 20 points for the sparklines)
+    // Generate historical data points
     List<MetricDataPoint> throughputHistory = getHistory(startTime, durationMinutes, null, true);
     List<MetricDataPoint> successHistory = getHistory(startTime, durationMinutes, true, false);
     List<MetricDataPoint> failureHistory = getHistory(startTime, durationMinutes, false, false);
@@ -92,9 +99,11 @@ public class MetricsLogic {
     List<MetricDataPoint> workerSaturationHistory = getSaturationHistory(startTime, durationMinutes, threadpoolSize);
     List<MetricDataPoint> queueBackpressureHistory = getBackpressureHistory(startTime, durationMinutes);
 
-    // Fetch Task Stream data (fixed 10-minute window around now)
-    Instant streamStart = Instant.now().minus(5, ChronoUnit.MINUTES);
-    Instant streamEnd = Instant.now().plus(5, ChronoUnit.MINUTES);
+    // Fetch Task Stream data (fixed 10-minute window aligned to minute)
+    long streamAlignment = 60000; // Align to minute
+    long alignedStreamNow = (nowMillis / streamAlignment) * streamAlignment;
+    Instant streamStart = Instant.ofEpochMilli(alignedStreamNow).minus(5, ChronoUnit.MINUTES);
+    Instant streamEnd = Instant.ofEpochMilli(alignedStreamNow).plus(5, ChronoUnit.MINUTES);
     
     no.bekk.dbscheduler.ui.model.TaskDetailsRequestParams logParams = new no.bekk.dbscheduler.ui.model.TaskDetailsRequestParams(
         no.bekk.dbscheduler.ui.model.TaskRequestParams.TaskFilter.ALL,
@@ -209,12 +218,9 @@ public class MetricsLogic {
     int secondsPerBucket = (totalMinutes * 60) / points;
     List<MetricDataPoint> history = new ArrayList<>();
     
-    // Lead-in point at startTime to ensure graph spans the whole width
-    history.add(new MetricDataPoint(startTime, 0.0));
-
-    for (int i = 0; i < points; i++) {
-      Instant bucketStart = startTime.plus(i * secondsPerBucket, ChronoUnit.SECONDS);
-      Instant bucketEnd = bucketStart.plus(secondsPerBucket, ChronoUnit.SECONDS);
+    for (int i = 0; i <= points; i++) {
+      Instant bucketEnd = startTime.plus(i * (long)secondsPerBucket, ChronoUnit.SECONDS);
+      Instant bucketStart = bucketEnd.minus(secondsPerBucket, ChronoUnit.SECONDS);
       
       MapSqlParameterSource params = new MapSqlParameterSource()
           .addValue("bStart", java.sql.Timestamp.from(bucketStart))
