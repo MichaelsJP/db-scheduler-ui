@@ -43,6 +43,9 @@ export const LogCard: React.FC<LogCardProps> = ({ log }) => (
     <LogAccordionItem
       taskData={log.taskData}
       stackTrace={log.exceptionStackTrace}
+      taskName={log.taskName}
+      taskInstance={log.taskInstance}
+      executionTime={log.executionTime}
     />
   </AccordionItem>
 );

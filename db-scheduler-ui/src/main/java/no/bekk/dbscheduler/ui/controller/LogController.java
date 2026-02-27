@@ -39,4 +39,12 @@ public class LogController {
   public LogPollResponse pollLogs(TaskDetailsRequestParams params) {
     return logLogic.pollLogs(params);
   }
+
+  @GetMapping("/messages")
+  public java.util.List<LogMessageModel> getLogMessages(
+      @RequestParam String taskName,
+      @RequestParam String taskInstance,
+      @RequestParam String executionTime) {
+    return logLogic.getLogMessages(taskName, taskInstance, java.time.Instant.parse(executionTime));
+  }
 }

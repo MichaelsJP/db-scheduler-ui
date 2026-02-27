@@ -24,6 +24,7 @@ public class LogModel {
   private final String taskName;
   private final String taskInstance;
   private final Object taskData;
+  private final Instant executionTime;
   private final Instant timeStarted;
   private final Instant timeFinished;
   private final boolean succeeded;

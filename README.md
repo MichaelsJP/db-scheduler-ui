@@ -13,6 +13,7 @@ dashboard for monitoring and basic administration of tasks.
 * **Delete tasks**
 * **Uses SpringBoot** to launch a UI
 * **View the history of all tasks** (optional)
+* **Detailed execution logs** - log progress messages from within your task handlers and view them in the history tab (requires db-scheduler-log).
 
 <img alt="Screenshot" src="Screenshot_Frontpage.png" width=700/>
 <img alt="Screenshot" src="Screenshot_Group.png" width=700/>
@@ -31,7 +32,7 @@ dashboard for monitoring and basic administration of tasks.
 * An existing Spring Boot application, with [db-scheduler](https://github.com/kagkarlsson/db-scheduler)
 * Minimum db-scheduler version 15
 * Minimum Java 17 and SpringBoot 3.3 (or SpringBoot 4.0 for the Spring Boot 4 starter)
-* Optional (if you want task history): db-scheduler-log version 0.7.0
+* Optional (if you want task history): db-scheduler-log (latest version recommended for detailed execution logs)
 
 ## Getting started
 

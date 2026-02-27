@@ -259,6 +259,7 @@ public class LogLogic {
           rs.getString("task_name"),
           rs.getString("task_instance"),
           taskData,
+          rs.getTimestamp("execution_time") != null ? rs.getTimestamp("execution_time").toInstant() : rs.getTimestamp("time_started").toInstant(),
           rs.getTimestamp("time_started").toInstant(),
           rs.getTimestamp("time_finished").toInstant(),
           rs.getBoolean("succeeded"),
@@ -267,5 +268,25 @@ public class LogLogic {
           rs.getString("exception_message"),
           rs.getString("exception_stacktrace"));
     }
+  }
+
+  public List<no.bekk.dbscheduler.ui.model.LogMessageModel> getLogMessages(String taskName, String taskInstance, Instant executionTime) {
+      MapSqlParameterSource params = new MapSqlParameterSource();
+      params.addValue("taskName", taskName);
+      params.addValue("taskInstance", taskInstance);
+      params.addValue("executionTime", Timestamp.from(executionTime));
+      
+      return namedParameterJdbcTemplate.query(
+          "SELECT * FROM scheduled_execution_log_messages WHERE task_name = :taskName AND task_instance = :taskInstance AND execution_time = :executionTime ORDER BY time_logged ASC",
+          params,
+          (rs, rowNum) -> new no.bekk.dbscheduler.ui.model.LogMessageModel(
+                  rs.getString("task_name"),
+                  rs.getString("task_instance"),
+                  rs.getTimestamp("execution_time").toInstant(),
+                  rs.getString("log_level"),
+                  rs.getString("log_message"),
+                  rs.getTimestamp("time_logged").toInstant()
+              )
+      );
   }
 }

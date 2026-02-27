@@ -11,18 +11,11 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export type Log = {
-  id: number;
+export interface LogMessageModel {
   taskName: string;
   taskInstance: string;
-  taskData: object | null;
   executionTime: string;
-  pickedBy: string | null;
-  timeStarted: Date;
-  timeFinished: Date;
-  succeeded: boolean;
-  durationMs: number;
-  exceptionClass: string | null;
-  exceptionMessage: string | null;
-  exceptionStackTrace: string | null;
-};
+  logLevel: string;
+  logMessage: string;
+  timeLogged: string;
+}
