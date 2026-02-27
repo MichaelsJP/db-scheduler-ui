@@ -259,7 +259,7 @@ public class LogLogic {
 
     @Override
     public String getQueryPart() {
-      if ("PostgreSQL".equalsIgnoreCase(databaseProductName)) {
+      if (databaseProductName != null && databaseProductName.toLowerCase().contains("postgres")) {
         return "tags && CAST(:tags AS text[])";
       }
       // If not PostgreSQL, we assume tags might be stored as VARCHAR/TEXT if they exist at all
@@ -296,9 +296,15 @@ public class LogLogic {
       try {
         java.sql.Array tagsArray = rs.getArray("tags");
         if (tagsArray != null) {
-          String[] tagsStrings = (String[]) tagsArray.getArray();
-          if (tagsStrings != null) {
-            tags = java.util.Arrays.asList(tagsStrings);
+          Object array = tagsArray.getArray();
+          if (array instanceof String[]) {
+            tags = java.util.Arrays.asList((String[]) array);
+          } else if (array instanceof Object[]) {
+            for (Object o : (Object[]) array) {
+              if (o != null) {
+                tags.add(o.toString());
+              }
+            }
           }
         }
       } catch (SQLException e) {

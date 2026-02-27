@@ -42,45 +42,60 @@ export const TimelineChart = ({ width, height, timeline, now, start, end }: Time
     range: [margin.left, width - margin.right],
   }), [start, end, width, margin.left, margin.right]);
 
+  if (width < 10 || height < 10) return null;
+
   return (
     <svg width={width} height={height}>
       <GridColumns scale={xScale} width={width} height={height - margin.bottom} stroke="#f0f0f0" />
       <Group top={margin.top}>
         <AnimatePresence>
           {/* Past Logs */}
-          {timeline.past.map((log: Log, i: number) => (
-            <motion.rect
-              key={`log-${log.id}`}
-              initial={{ opacity: 0 }}
-              animate={{ 
-                opacity: 0.8,
-                x: xScale(new Date(log.timeStarted)),
-                width: Math.max(5, xScale(new Date(log.timeFinished)) - xScale(new Date(log.timeStarted)))
-              }}
-              y={i * 25 % (height - margin.bottom - margin.top)}
-              height={20}
-              fill={log.succeeded ? '#48BB78' : '#F56565'}
-              rx={4}
-              transition={{ duration: 0.5 }}
-            />
-          ))}
+          {timeline.past?.map((log: Log, i: number) => {
+            const s = new Date(log.timeStarted);
+            const f = new Date(log.timeFinished);
+            if (isNaN(s.getTime()) || isNaN(f.getTime())) return null;
+            
+            return (
+              <motion.rect
+                key={`log-${log.id}`}
+                initial={{ opacity: 0 }}
+                animate={{ 
+                  opacity: 0.8,
+                  x: xScale(s),
+                  width: Math.max(5, xScale(f) - xScale(s))
+                }}
+                y={i * 25 % Math.max(1, height - margin.bottom - margin.top - 20)}
+                height={20}
+                fill={log.succeeded ? '#48BB78' : '#F56565'}
+                rx={4}
+                transition={{ duration: 0.5 }}
+              />
+            );
+          })}
           {/* Future Tasks */}
-          {timeline.future.map((task: Task, i: number) => (
-            <motion.rect
-              key={`task-${task.taskName}-${i}`}
-              initial={{ opacity: 0 }}
-              animate={{ 
-                opacity: 0.6,
-                x: xScale(new Date(task.executionTime[0]))
-              }}
-              y={(i * 25 + 200) % (height - margin.bottom - margin.top)}
-              width={12}
-              height={20}
-              fill="#4299E1"
-              rx={4}
-              transition={{ duration: 0.5 }}
-            />
-          ))}
+          {timeline.future?.map((task: Task, i: number) => {
+            const execTime = Array.isArray(task.executionTime) ? task.executionTime[0] : task.executionTime;
+            if (!execTime) return null;
+            const d = new Date(execTime);
+            if (isNaN(d.getTime())) return null;
+
+            return (
+              <motion.rect
+                key={`task-${task.taskName}-${i}`}
+                initial={{ opacity: 0 }}
+                animate={{ 
+                  opacity: 0.6,
+                  x: xScale(d)
+                }}
+                y={(i * 25 + 200) % Math.max(1, height - margin.bottom - margin.top - 20)}
+                width={12}
+                height={20}
+                fill="#4299E1"
+                rx={4}
+                transition={{ duration: 0.5 }}
+              />
+            );
+          })}
         </AnimatePresence>
         
         {/* "Now" Line */}

@@ -16,17 +16,20 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { theme } from 'src/styles/theme';
 import { FrontPage } from './pages/FrontPage';
+import { RefreshProvider } from 'src/context/RefreshContext';
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { refetchInterval: 2000 } },
+  defaultOptions: { queries: { refetchInterval: false } },
 });
 
 function App() {
   return (
     <ChakraProvider theme={theme}>
       <QueryClientProvider client={queryClient}>
-        <FrontPage />
-        <ReactQueryDevtools initialIsOpen={false} />
+        <RefreshProvider>
+          <FrontPage />
+          <ReactQueryDevtools initialIsOpen={false} />
+        </RefreshProvider>
       </QueryClientProvider>
     </ChakraProvider>
   );

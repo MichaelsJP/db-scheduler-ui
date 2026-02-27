@@ -29,11 +29,17 @@ public class MetricsLogic {
   private final Scheduler scheduler;
   private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
   private final String logTableName;
+  private final String databaseProductName;
 
   public MetricsLogic(Scheduler scheduler, DataSource dataSource, String logTableName) {
     this.scheduler = scheduler;
     this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
     this.logTableName = logTableName;
+    try (java.sql.Connection connection = dataSource.getConnection()) {
+      this.databaseProductName = connection.getMetaData().getDatabaseProductName();
+    } catch (java.sql.SQLException e) {
+      throw new RuntimeException("Failed to detect database product name", e);
+    }
   }
 
   public MetricsModel getMetrics(int durationMinutes) {
@@ -58,19 +64,19 @@ public class MetricsLogic {
     double queueBackpressure = scheduledTasks != null ? scheduledTasks.doubleValue() : 0.0;
 
     Long successCount = namedParameterJdbcTemplate.queryForObject(
-        "SELECT COUNT(*) FROM " + logTableName + " WHERE time_finished >= :startTime AND succeeded = TRUE",
+        "SELECT COUNT(*) FROM " + logTableName + " WHERE time_finished >= :startTime AND " + getSucceededClause(true),
         params,
         Long.class);
     
     Long failureCount = namedParameterJdbcTemplate.queryForObject(
-        "SELECT COUNT(*) FROM " + logTableName + " WHERE time_finished >= :startTime AND succeeded = FALSE",
+        "SELECT COUNT(*) FROM " + logTableName + " WHERE time_finished >= :startTime AND " + getSucceededClause(false),
         params,
         Long.class);
 
     // Generate historical data points (e.g., 20 points for the sparklines)
-    List<MetricDataPoint> throughputHistory = getHistory(startTime, durationMinutes, null);
-    List<MetricDataPoint> successHistory = getHistory(startTime, durationMinutes, true);
-    List<MetricDataPoint> failureHistory = getHistory(startTime, durationMinutes, false);
+    List<MetricDataPoint> throughputHistory = getHistory(startTime, durationMinutes, null, true);
+    List<MetricDataPoint> successHistory = getHistory(startTime, durationMinutes, true, false);
+    List<MetricDataPoint> failureHistory = getHistory(startTime, durationMinutes, false, false);
 
     return new MetricsModel(
         workerSaturation,
@@ -84,7 +90,14 @@ public class MetricsLogic {
     );
   }
 
-  private List<MetricDataPoint> getHistory(Instant startTime, int totalMinutes, Boolean succeeded) {
+  private String getSucceededClause(boolean succeeded) {
+    if (databaseProductName != null && databaseProductName.toLowerCase().contains("oracle")) {
+      return succeeded ? "succeeded = 1" : "succeeded = 0";
+    }
+    return succeeded ? "succeeded = TRUE" : "succeeded = FALSE";
+  }
+
+  private List<MetricDataPoint> getHistory(Instant startTime, int totalMinutes, Boolean succeeded, boolean asRate) {
     int points = 20;
     int secondsPerBucket = (totalMinutes * 60) / points;
     List<MetricDataPoint> history = new ArrayList<>();
@@ -99,11 +112,15 @@ public class MetricsLogic {
       
       String query = "SELECT COUNT(*) FROM " + logTableName + " WHERE time_finished >= :bStart AND time_finished < :bEnd";
       if (succeeded != null) {
-        query += " AND succeeded = " + (succeeded ? "TRUE" : "FALSE");
+        query += " AND " + getSucceededClause(succeeded);
       }
       
       Long count = namedParameterJdbcTemplate.queryForObject(query, params, Long.class);
-      history.add(new MetricDataPoint(bucketEnd, count != null ? count.doubleValue() : 0.0));
+      double val = count != null ? count.doubleValue() : 0.0;
+      if (asRate) {
+        val = val / secondsPerBucket;
+      }
+      history.add(new MetricDataPoint(bucketEnd, val));
     }
     return history;
   }

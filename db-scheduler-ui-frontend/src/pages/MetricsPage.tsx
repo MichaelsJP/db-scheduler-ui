@@ -23,9 +23,7 @@ import {
   HStack,
   Select,
   Text,
-  IconButton,
 } from '@chakra-ui/react';
-import { RepeatIcon } from '@chakra-ui/icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { getMetrics, METRICS_QUERY_KEY } from 'src/services/getMetrics';
@@ -40,6 +38,7 @@ import { localPoint } from '@visx/event';
 import { bisector } from 'd3-array';
 import { MetricDataPoint } from 'src/models/Metrics';
 import colors from 'src/styles/colors';
+import { RefreshButton } from 'src/components/input/RefreshButton';
 
 const bisectDate = bisector<MetricDataPoint, Date>(d => new Date(d.timestamp)).left;
 
@@ -178,10 +177,7 @@ const MetricCard = ({ label, value, helpText, history, color }: { label: string,
 );
 
 export const MetricsPage: React.FC = () => {
-  const [timeWindow, setTimeWindow] = useState(60); // minutes
-  const [refreshInterval, setRefreshInterval] = useState(10); // seconds
-  const [countdown, setCountdown] = useState(refreshInterval);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [timeWindow, setTimeWindow] = useState(10); // minutes
   const [now, setNow] = useState(new Date());
   const queryClient = useQueryClient();
   
@@ -190,38 +186,16 @@ export const MetricsPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleManualRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    await Promise.all([
-      queryClient.invalidateQueries([METRICS_QUERY_KEY]),
-      queryClient.invalidateQueries([TIMELINE_QUERY_KEY])
-    ]);
-    if (refreshInterval !== 0) {
-      setCountdown(refreshInterval);
-    }
-    // Artificial delay for the spin effect
-    setTimeout(() => setIsRefreshing(false), 800);
-  }, [queryClient, refreshInterval]);
-
+  // Synchronize with global refresh events
   useEffect(() => {
-    if (refreshInterval === 0) {
-      setCountdown(0);
-      return;
-    }
-    
-    setCountdown(refreshInterval);
-    const interval = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          handleManualRefresh();
-          return refreshInterval;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    
-    return () => clearInterval(interval);
-  }, [refreshInterval, handleManualRefresh]);
+    const handleGlobalRefresh = () => {
+      queryClient.invalidateQueries([METRICS_QUERY_KEY]);
+      queryClient.invalidateQueries([TIMELINE_QUERY_KEY]);
+    };
+
+    window.addEventListener('db-scheduler-ui-refresh', handleGlobalRefresh);
+    return () => window.removeEventListener('db-scheduler-ui-refresh', handleGlobalRefresh);
+  }, [queryClient]);
 
   const stabilizedNow = useMemo(() => {
     const time = now.getTime();
@@ -241,14 +215,10 @@ export const MetricsPage: React.FC = () => {
     [TIMELINE_QUERY_KEY, start.toISOString(), end.toISOString()],
     () => getTimeline(start, end),
     { 
-      refetchInterval: refreshInterval === 0 ? false : Math.min(refreshInterval, 5) * 1000,
+      refetchInterval: 5000, // Small local update interval for smooth animation
       keepPreviousData: true 
     }
   );
-
-  if ((metricsLoading && !metrics) || (timelineLoading && !timeline)) {
-    return <Box p={10}>Loading overview...</Box>;
-  }
 
   return (
     <VStack align="stretch" spacing={8} pb={10}>
@@ -265,111 +235,83 @@ export const MetricsPage: React.FC = () => {
               bg="white"
               borderRadius="md"
             >
-              <option value={15}>15 minutes</option>
+              <option value={1}>1 minute</option>
+              <option value={5}>5 minutes</option>
+              <option value={10}>10 minutes</option>
+              <option value={20}>20 minutes</option>
+              <option value={30}>30 minutes</option>
               <option value={60}>1 hour</option>
-              <option value={360}>6 hours</option>
-              <option value={1440}>24 hours</option>
             </Select>
           </HStack>
-          
-          <HStack>
-            <Text fontSize="sm" fontWeight="bold" whiteSpace="nowrap">Refresh:</Text>
-            <Select 
-              size="sm" 
-              w="120px" 
-              value={refreshInterval} 
-              onChange={(e) => setRefreshInterval(parseInt(e.target.value))}
-              bg="white"
-              borderRadius="md"
-            >
-              <option value={0}>Off</option>
-              <option value={5}>5s</option>
-              <option value={10}>10s</option>
-              <option value={30}>30s</option>
-              <option value={60}>1m</option>
-            </Select>
-            <IconButton
-              aria-label="Refresh manually"
-              icon={isRefreshing ? <RepeatIcon /> : <Text fontSize="xs" fontWeight="bold">{refreshInterval > 0 ? countdown : ""}</Text>}
-              size="sm"
-              onClick={handleManualRefresh}
-              variant="outline"
-              bg="white"
-              isDisabled={isRefreshing}
-              className={isRefreshing ? "spin-animation" : ""}
-              _hover={{ bg: "gray.50" }}
-              w="36px"
-            />
-            <style>{`
-              @keyframes spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-              }
-              .spin-animation svg {
-                animation: spin 0.8s linear infinite;
-              }
-            `}</style>
-          </HStack>
+          <RefreshButton />
         </HStack>
       </HStack>
       
-      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={10}>
-        <MetricCard
-          label="Throughput"
-          value={metrics ? `${metrics.throughput.toFixed(2)}/s` : '0.00/s'}
-          helpText="Avg executions / sec"
-          history={metrics?.throughputHistory}
-          color={colors.running['300']}
-        />
-        <MetricCard
-          label="Successes"
-          value={metrics ? metrics.successCount.toString() : '0'}
-          helpText={`Total successful in window`}
-          history={metrics?.successHistory}
-          color={colors.success['100']}
-        />
-        <MetricCard
-          label="Failures"
-          value={metrics ? metrics.failureCount.toString() : '0'}
-          helpText={`Total failed in window`}
-          history={metrics?.failureHistory}
-          color={colors.failed['200']}
-        />
-      </SimpleGrid>
+      {metricsLoading && !metrics ? (
+        <Box p={10}>Loading metrics...</Box>
+      ) : (
+        <>
+          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={10}>
+            <MetricCard
+              label="Throughput"
+              value={metrics ? `${metrics.throughput.toFixed(2)}/s` : '0.00/s'}
+              helpText="Avg executions / sec"
+              history={metrics?.throughputHistory}
+              color={colors.running['300']}
+            />
+            <MetricCard
+              label="Successes"
+              value={metrics ? metrics.successCount.toString() : '0'}
+              helpText={`Total successful in window`}
+              history={metrics?.successHistory}
+              color={colors.success['100']}
+            />
+            <MetricCard
+              label="Failures"
+              value={metrics ? metrics.failureCount.toString() : '0'}
+              helpText={`Total failed in window`}
+              history={metrics?.failureHistory}
+              color={colors.failed['200']}
+            />
+          </SimpleGrid>
 
-      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={10}>
-        <MetricCard
-          label="Worker Saturation"
-          value={metrics ? `${(metrics.workerSaturation * 100).toFixed(1)}%` : '0%'}
-          helpText="Current threadpool usage"
-          color="#805AD5"
-        />
-        <MetricCard
-          label="Queue Backpressure"
-          value={metrics ? metrics.queueBackpressure.toString() : '0'}
-          helpText="Currently enqueued tasks"
-          color="#DD6B20"
-        />
-      </SimpleGrid>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={10}>
+            <MetricCard
+              label="Worker Saturation"
+              value={metrics ? `${(metrics.workerSaturation * 100).toFixed(1)}%` : '0%'}
+              helpText="Current threadpool usage"
+              color="#805AD5"
+            />
+            <MetricCard
+              label="Queue Backpressure"
+              value={metrics ? metrics.queueBackpressure.toString() : '0'}
+              helpText="Currently enqueued tasks"
+              color="#DD6B20"
+            />
+          </SimpleGrid>
+        </>
+      )}
 
       <Box pt={4}>
         <Heading size="md" mb={4}>Live Timeline</Heading>
         <Box bg="white" shadow="md" borderRadius="xl" position="relative" overflow="hidden" minH="400px">
-          {timeline ? (
+          {timelineLoading && !timeline ? (
+            <Box p={10}>Loading timeline...</Box>
+          ) : (
             <ParentSize>
               {({ width, height }) => (
-                <TimelineChart 
-                  width={width} 
-                  height={height} 
-                  timeline={timeline} 
-                  now={now} 
-                  start={start} 
-                  end={end} 
-                />
+                width > 0 && height > 0 && timeline ? (
+                  <TimelineChart 
+                    width={width} 
+                    height={height} 
+                    timeline={timeline} 
+                    now={now} 
+                    start={start} 
+                    end={end} 
+                  />
+                ) : null
               )}
             </ParentSize>
-          ) : (
-            <Box p={10}>Loading timeline...</Box>
           )}
         </Box>
       </Box>
