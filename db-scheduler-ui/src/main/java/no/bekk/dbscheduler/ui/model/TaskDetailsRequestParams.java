@@ -36,7 +36,8 @@ public class TaskDetailsRequestParams extends TaskRequestParams {
       Instant endTime,
       String taskName,
       String taskId,
-      Boolean refresh) {
+      Boolean refresh,
+      java.util.List<String> tags) {
     super(
         filter,
         pageNumber,
@@ -49,7 +50,8 @@ public class TaskDetailsRequestParams extends TaskRequestParams {
         taskInstanceExactMatch,
         startTime,
         endTime,
-        refresh);
+        refresh,
+        tags);
     this.taskId = taskId;
     this.taskName = taskName;
   }

@@ -25,11 +25,15 @@ import javax.sql.DataSource;
 import no.bekk.dbscheduler.ui.controller.ConfigController;
 import no.bekk.dbscheduler.ui.controller.IndexHtmlController;
 import no.bekk.dbscheduler.ui.controller.LogController;
+import no.bekk.dbscheduler.ui.controller.MetricsController;
 import no.bekk.dbscheduler.ui.controller.SpaFallbackMvc;
 import no.bekk.dbscheduler.ui.controller.TaskAdminController;
 import no.bekk.dbscheduler.ui.controller.TaskController;
+import no.bekk.dbscheduler.ui.controller.TimelineController;
 import no.bekk.dbscheduler.ui.service.LogLogic;
+import no.bekk.dbscheduler.ui.service.MetricsLogic;
 import no.bekk.dbscheduler.ui.service.TaskLogic;
+import no.bekk.dbscheduler.ui.service.TimelineLogic;
 import no.bekk.dbscheduler.ui.util.Caching;
 import no.bekk.dbscheduler.uistarter.config.DbSchedulerUiProperties;
 import no.bekk.dbscheduler.uistarter.config.DbSchedulerUiWebConfiguration;
@@ -125,6 +129,23 @@ public class UiApiAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
+  MetricsLogic metricsLogic(
+      Scheduler scheduler,
+      DataSource dataSource,
+      DbSchedulerCustomizer customizer,
+      @Value("${db-scheduler-log.table-name:scheduled_execution_logs}") String logTableName) {
+    return new MetricsLogic(
+        scheduler, customizer.dataSource().orElse(dataSource), logTableName);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  MetricsController metricsController(MetricsLogic metricsLogic) {
+    return new MetricsController(metricsLogic);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
   @ConditionalOnProperty(
       prefix = "db-scheduler-ui",
       name = "history",
@@ -132,6 +153,28 @@ public class UiApiAutoConfiguration {
       matchIfMissing = false)
   LogController logController(LogLogic logLogic) {
     return new LogController(logLogic);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  @ConditionalOnProperty(
+      prefix = "db-scheduler-ui",
+      name = "history",
+      havingValue = "true",
+      matchIfMissing = false)
+  TimelineLogic timelineLogic(TaskLogic taskLogic, LogLogic logLogic) {
+    return new TimelineLogic(taskLogic, logLogic);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  @ConditionalOnProperty(
+      prefix = "db-scheduler-ui",
+      name = "history",
+      havingValue = "true",
+      matchIfMissing = false)
+  TimelineController timelineController(TimelineLogic timelineLogic) {
+    return new TimelineController(timelineLogic);
   }
 
   @Bean

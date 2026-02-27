@@ -136,6 +136,10 @@ public class LogLogic {
               requestParams.isTaskInstanceExactMatch()));
     }
 
+    if (requestParams.getTags() != null && !requestParams.getTags().isEmpty()) {
+      queryBuilder.andCondition(new TagCondition(requestParams.getTags(), databaseProductName));
+    }
+
     queryBuilder.orderBy(requestParams.isAsc() ? "id desc" : "id asc");
 
     if (logLimit > 0) {
@@ -238,6 +242,30 @@ public class LogLogic {
     }
   }
 
+  public static class TagCondition implements AndCondition {
+    private final List<String> tags;
+    private final String databaseProductName;
+
+    public TagCondition(List<String> tags, String databaseProductName) {
+      this.tags = tags;
+      this.databaseProductName = databaseProductName;
+    }
+
+    @Override
+    public String getQueryPart() {
+      if ("PostgreSQL".equalsIgnoreCase(databaseProductName)) {
+        return "tags && :tags::text[]";
+      }
+      // Fallback or other databases not yet supported
+      return "1=1";
+    }
+
+    @Override
+    public void setParameters(MapSqlParameterSource p) {
+      p.addValue("tags", tags.toArray(new String[0]));
+    }
+  }
+
   @RequiredArgsConstructor
   public static class LogModelRowMapper implements RowMapper<LogModel> {
 
@@ -254,19 +282,39 @@ public class LogLogic {
         }
       }
 
+      String exceptionClass = rs.getString("exception_class");
+      String exceptionMessage = rs.getString("exception_message");
+      String exceptionStackTrace = rs.getString("exception_stacktrace");
+
+      java.util.List<String> tags = new java.util.ArrayList<>();
+      try {
+        java.sql.Array tagsArray = rs.getArray("tags");
+        if (tagsArray != null) {
+          String[] tagsStrings = (String[]) tagsArray.getArray();
+          if (tagsStrings != null) {
+            tags = java.util.Arrays.asList(tagsStrings);
+          }
+        }
+      } catch (SQLException e) {
+        // Column might not exist in all databases or versions
+      }
+
       return new LogModel(
           rs.getLong("id"),
           rs.getString("task_name"),
           rs.getString("task_instance"),
           taskData,
-          rs.getTimestamp("execution_time") != null ? rs.getTimestamp("execution_time").toInstant() : rs.getTimestamp("time_started").toInstant(),
+          rs.getTimestamp("execution_time") != null
+              ? rs.getTimestamp("execution_time").toInstant()
+              : rs.getTimestamp("time_started").toInstant(),
           rs.getTimestamp("time_started").toInstant(),
           rs.getTimestamp("time_finished").toInstant(),
           rs.getBoolean("succeeded"),
           rs.getLong("duration_ms"),
-          rs.getString("exception_class"),
-          rs.getString("exception_message"),
-          rs.getString("exception_stacktrace"));
+          exceptionClass,
+          exceptionMessage,
+          exceptionStackTrace,
+          tags);
     }
   }
 

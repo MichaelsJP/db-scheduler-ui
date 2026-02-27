@@ -31,6 +31,7 @@ public class TaskRequestParams {
   private final Instant startTime;
   private final Instant endTime;
   private final boolean refresh;
+  private final java.util.List<String> tags;
 
   public TaskRequestParams(
       TaskFilter filter,
@@ -44,7 +45,8 @@ public class TaskRequestParams {
       Boolean taskInstanceExactMatch,
       Instant startTime,
       Instant endTime,
-      Boolean refresh) {
+      Boolean refresh,
+      java.util.List<String> tags) {
     this.filter = filter != null ? filter : TaskFilter.ALL;
     this.pageNumber = pageNumber != null ? pageNumber : 0;
     this.size = size != null ? size : 10;
@@ -57,6 +59,7 @@ public class TaskRequestParams {
     this.startTime = startTime;
     this.endTime = endTime;
     this.refresh = refresh != null ? refresh : true;
+    this.tags = tags;
   }
 
   public enum TaskFilter {

@@ -96,6 +96,10 @@ public class TaskLogic {
     }
   }
 
+  public void updateTags(String taskId, String taskName, List<String> tags) {
+    scheduler.updateTags(TaskInstanceId.of(taskName, taskId), tags);
+  }
+
   public GetTasksResponse getAllTasks(TaskRequestParams params) {
     List<ScheduledExecution<Object>> executions =
         caching.getExecutionsFromCacheOrDB(params.isRefresh(), scheduler);
@@ -108,6 +112,7 @@ public class TaskLogic {
     tasks =
         QueryUtils.searchByTaskInstance(
             tasks, params.getSearchTermTaskInstance(), params.isTaskInstanceExactMatch());
+    tasks = QueryUtils.filterByTags(tasks, params.getTags());
     if (!showData) {
       tasks.forEach(e -> e.setTaskData(List.of()));
     }
@@ -153,6 +158,7 @@ public class TaskLogic {
     tasks =
         QueryUtils.searchByTaskInstance(
             tasks, params.getSearchTermTaskInstance(), params.isTaskInstanceExactMatch());
+    tasks = QueryUtils.filterByTags(tasks, params.getTags());
     tasks =
         QueryUtils.sortTasks(
             QueryUtils.filterTasks(tasks, params.getFilter()), params.getSorting(), params.isAsc());

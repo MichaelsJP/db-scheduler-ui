@@ -38,7 +38,8 @@ public class TaskMapper {
                     execution.getLastFailure(),
                     List.of(execution.getConsecutiveFailures()), // Modified here
                     null,
-                    0))
+                    0,
+                    execution.getTags()))
         .collect(Collectors.toList());
   }
 
@@ -88,6 +89,13 @@ public class TaskMapper {
                       .map(TaskModel::getConsecutiveFailures)
                       .flatMap(List::stream)
                       .collect(Collectors.toList())); // Modified here
+              taskModel.setTags(
+                  taskModels.stream()
+                      .map(TaskModel::getTags)
+                      .filter(Objects::nonNull)
+                      .flatMap(List::stream)
+                      .distinct()
+                      .collect(Collectors.toList()));
               return taskModel;
             })
         .collect(Collectors.toList());

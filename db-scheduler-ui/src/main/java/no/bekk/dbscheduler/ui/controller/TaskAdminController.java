@@ -55,4 +55,12 @@ public class TaskAdminController {
   public void deleteTaskNow(@RequestParam String id, @RequestParam String name) {
     taskLogic.deleteTask(id, name);
   }
+
+  @PostMapping("/tags")
+  public void updateTags(
+      @RequestParam String id,
+      @RequestParam String name,
+      @RequestParam java.util.List<String> tags) {
+    taskLogic.updateTags(id, name, tags);
+  }
 }

@@ -32,4 +32,5 @@ public class LogModel {
   private final String exceptionClass;
   private final String exceptionMessage;
   private final String exceptionStackTrace;
+  private final java.util.List<String> tags;
 }

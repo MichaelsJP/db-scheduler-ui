@@ -13,8 +13,6 @@
  */
 package no.bekk.dbscheduler.ui.model;
 
-import java.time.Instant;
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,18 +22,10 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class TaskModel {
-
-  private String taskName;
-  private List<String> taskInstance;
-  private List<Object> taskData;
-  private List<Instant> executionTime;
-  private List<Boolean> picked;
-  private List<String> pickedBy;
-  private List<Instant> lastSuccess;
-  private Instant lastFailure;
-  private List<Integer> consecutiveFailures;
-  private Instant lastHeartbeat;
-  private int version;
-  private List<String> tags;
+public class MetricsModel {
+  private double workerSaturation;
+  private double throughput;
+  private double queueBackpressure;
+  private int successCount;
+  private int failureCount;
 }

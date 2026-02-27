@@ -94,6 +94,15 @@ public class QueryUtils {
     return tasks;
   }
 
+  public static List<TaskModel> filterByTags(List<TaskModel> tasks, List<String> tags) {
+    if (tags == null || tags.isEmpty()) {
+      return tasks;
+    }
+    return tasks.stream()
+        .filter(task -> task.getTags() != null && task.getTags().stream().anyMatch(tags::contains))
+        .collect(Collectors.toList());
+  }
+
   public static List<TaskModel> searchByTaskName(
       List<TaskModel> tasks, String searchTermTaskName, boolean isExactMatch) {
     return search(tasks, searchTermTaskName, true, isExactMatch);
